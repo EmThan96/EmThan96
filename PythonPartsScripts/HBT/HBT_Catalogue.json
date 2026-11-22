@@ -90,7 +90,8 @@
    "anchor": "hook",
    "leg": "b",
    "connection": "straight",
-   "text": "Type 2 - bend b, D=10d"
+   "text": "Type 2 - bend b, D=10d",
+   "leg_bend": "catalogue"
   },
   "3": {
    "rows": 1,
@@ -132,7 +133,8 @@
    "anchor": "hook_out",
    "leg": "b1",
    "connection": "straight",
-   "text": "Type 23 - bends b1, D=10d"
+   "text": "Type 23 - bends b1, D=10d",
+   "leg_bend": "catalogue"
   },
   "33": {
    "rows": 2,
@@ -153,7 +155,8 @@
    "anchor": "hook_out",
    "leg": "b1",
    "connection": "stirrup",
-   "text": "Type 7 - stirrup, bend b1, D=10d"
+   "text": "Type 7 - stirrup, bend b1, D=10d",
+   "leg_bend": "catalogue"
   },
   "8": {
    "rows": 2,
@@ -811,5 +814,76 @@
     }
    }
   }
- ]
+ ],
+ "lu_standard": {
+  "8": 320,
+  "10": 390,
+  "12": 460
+ },
+ "min_casing_length": {
+  "_source": "page 22, minimum casing lengths for lü standard; key = rebar Ø, then spacing s [cm]",
+  "8": {
+   "10": 650,
+   "15": 600,
+   "20": 650,
+   "25": 800
+  },
+  "10": {
+   "10": 800,
+   "15": 750,
+   "20": 700,
+   "25": 800
+  },
+  "12": {
+   "10": 950,
+   "15": 900,
+   "20": 850,
+   "25": 800
+  }
+ },
+ "custom_length": {
+  "min_without_table": 800,
+  "max": 1250,
+  "end_spacing_min": 25,
+  "_note": "Custom lengths 800..1250 use the lü,max column 'L >= 800'. Below 800 only with lü <= lü standard and L >= min_casing_length (straight connection types). Above 1250: on request."
+ },
+ "mandrel": {
+  "catalogue": 10,
+  "ec2": 4,
+  "_note": "D/Ø. 'catalogue' = D = 10Ø where the catalogue states it (legs b / b1 of types 2, 7, 23). 'ec2' = default for all other bends (EN 1992-1-1, Ø <= 16 mm)."
+ },
+ "attributes": {
+  "plan_text": [
+   "Plan_text",
+   "Plan text"
+  ],
+  "answers": [
+   [
+    "Answer 1",
+    "Answer_1",
+    "Answer1"
+   ],
+   [
+    "Answer 2",
+    "Answer_2",
+    "Answer2"
+   ],
+   [
+    "Answer 3",
+    "Answer_3",
+    "Answer3"
+   ],
+   [
+    "Answer 4",
+    "Answer_4",
+    "Answer4"
+   ],
+   [
+    "Answer 5",
+    "Answer_5",
+    "Answer5"
+   ]
+  ],
+  "_note": "Allplan attribute names, first name found in the project is used."
+ }
 }
