@@ -1,0 +1,85 @@
+{
+  "_info": {
+    "title": "HBT rebend connection catalogue for the HBT Fixture PythonPart",
+    "status": "PLACEHOLDER VALUES - NOT VERIFIED",
+    "note": "All dimensions in mm. The numbers below were NOT taken from the official manufacturer catalogue. Check every value against the current official HBT technical product information before using the fixtures in a project.",
+    "fields": {
+      "rows": "number of bar rows across the box width (1 or 2)",
+      "anchor_shape": "straight | hook90 | u (u = both rows joined by a U-bar on the anchor side; needs rows = 2)",
+      "box_lengths": "available box lengths",
+      "edge_distance": "minimum distance from box end to first bar axis",
+      "hook_length": "length of the 90 degree hook leg, in bar diameters (only for anchor_shape = hook90)",
+      "diameters.<d>.spacings": "available bar spacings for this bar diameter",
+      "diameters.<d>.box_width": "outer box width",
+      "diameters.<d>.box_depth": "outer box depth (from formwork face into the first pour)",
+      "diameters.<d>.anchor_length": "bar length in the first pour, measured from the formwork face",
+      "diameters.<d>.connection_length": "bar length in the second pour after straightening, measured from the formwork face",
+      "diameters.<d>.row_distance": "axis distance between the two bar rows (only rows = 2)",
+      "article_pattern": "name written into the fixture; placeholders {type} {d} {s} {L}"
+    }
+  },
+  "types": [
+    {
+      "code": "HBT-1R",
+      "name": "HBT single row",
+      "rows": 1,
+      "anchor_shape": "straight",
+      "box_lengths": [1250],
+      "edge_distance": 50,
+      "hook_length": 0,
+      "article_pattern": "{type} D{d}-{s} L={L}",
+      "diameters": {
+        "8":  {"spacings": [100, 125, 150, 200, 250], "box_width": 60,  "box_depth": 30, "anchor_length": 250, "connection_length": 400},
+        "10": {"spacings": [100, 125, 150, 200, 250], "box_width": 70,  "box_depth": 35, "anchor_length": 300, "connection_length": 500},
+        "12": {"spacings": [100, 125, 150, 200, 250], "box_width": 80,  "box_depth": 40, "anchor_length": 350, "connection_length": 600},
+        "14": {"spacings": [125, 150, 200, 250],      "box_width": 100, "box_depth": 45, "anchor_length": 400, "connection_length": 700},
+        "16": {"spacings": [150, 200, 250],           "box_width": 110, "box_depth": 50, "anchor_length": 450, "connection_length": 800}
+      }
+    },
+    {
+      "code": "HBT-1R-H",
+      "name": "HBT single row, hooked anchor",
+      "rows": 1,
+      "anchor_shape": "hook90",
+      "box_lengths": [1250],
+      "edge_distance": 50,
+      "hook_length": 10,
+      "article_pattern": "{type} D{d}-{s} L={L}",
+      "diameters": {
+        "8":  {"spacings": [100, 125, 150, 200, 250], "box_width": 60,  "box_depth": 30, "anchor_length": 150, "connection_length": 400},
+        "10": {"spacings": [100, 125, 150, 200, 250], "box_width": 70,  "box_depth": 35, "anchor_length": 180, "connection_length": 500},
+        "12": {"spacings": [100, 125, 150, 200, 250], "box_width": 80,  "box_depth": 40, "anchor_length": 210, "connection_length": 600}
+      }
+    },
+    {
+      "code": "HBT-2R",
+      "name": "HBT double row",
+      "rows": 2,
+      "anchor_shape": "straight",
+      "box_lengths": [1250],
+      "edge_distance": 50,
+      "hook_length": 0,
+      "article_pattern": "{type} 2xD{d}-{s} L={L}",
+      "diameters": {
+        "8":  {"spacings": [100, 125, 150, 200, 250], "box_width": 140, "box_depth": 30, "anchor_length": 250, "connection_length": 400, "row_distance": 80},
+        "10": {"spacings": [100, 125, 150, 200, 250], "box_width": 160, "box_depth": 35, "anchor_length": 300, "connection_length": 500, "row_distance": 90},
+        "12": {"spacings": [100, 125, 150, 200, 250], "box_width": 180, "box_depth": 40, "anchor_length": 350, "connection_length": 600, "row_distance": 100}
+      }
+    },
+    {
+      "code": "HBT-2R-U",
+      "name": "HBT double row, U-bar anchor",
+      "rows": 2,
+      "anchor_shape": "u",
+      "box_lengths": [1250],
+      "edge_distance": 50,
+      "hook_length": 0,
+      "article_pattern": "{type} 2xD{d}-{s} L={L}",
+      "diameters": {
+        "8":  {"spacings": [100, 125, 150, 200, 250], "box_width": 140, "box_depth": 30, "anchor_length": 200, "connection_length": 400, "row_distance": 80},
+        "10": {"spacings": [100, 125, 150, 200, 250], "box_width": 160, "box_depth": 35, "anchor_length": 240, "connection_length": 500, "row_distance": 90},
+        "12": {"spacings": [100, 125, 150, 200, 250], "box_width": 180, "box_depth": 40, "anchor_length": 280, "connection_length": 600, "row_distance": 100}
+      }
+    }
+  ]
+}
