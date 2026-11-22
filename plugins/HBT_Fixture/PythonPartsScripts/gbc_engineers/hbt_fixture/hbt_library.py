@@ -11,6 +11,8 @@ Pure Python (no Allplan imports).
 
 from __future__ import annotations
 
+__author__ = "Em Than - gbc engineers"
+
 import datetime
 import hashlib
 import json

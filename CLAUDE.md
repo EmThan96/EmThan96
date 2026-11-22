@@ -20,6 +20,16 @@ plugins/<Name>/                      Name in PascalCase_With_Underscores, e.g. H
 - Imports inside scripts: `from gbc_engineers.<snake_name> import <module>`.
 - Keep Allplan-independent logic in pure Python modules so it can be tested.
 
+## Author (always)
+
+Every PythonPart carries the author **Em Than - gbc engineers** in all of these places (the build fails otherwise):
+- `.pyp`: comment `<!-- Author: Em Than - gbc engineers -->` after `</Script>` and an expander `AboutExp` with a
+  `Text` parameter `AuthorText` = `Em Than - gbc engineers` (the .pyp schema has no author tag).
+- `install-config.yml`: comment line `# Author: Em Than - gbc engineers`.
+- every Python module: `__author__ = "Em Than - gbc engineers"` after the module docstring and after `from __future__ import ...` (Python requires that import first).
+- plugin README info table: row `| Author | Em Than - gbc engineers |`; root README table: column Author.
+- Company name in lowercase (gbc engineers) - organization writing rule.
+
 ## Packaging (always)
 
 - Every new PythonPart gets an `install-config.yml` with a NEW `uuid4` (never change it later),

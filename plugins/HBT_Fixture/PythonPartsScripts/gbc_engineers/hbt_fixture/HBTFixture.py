@@ -18,6 +18,8 @@ Each created fixture
 
 from __future__ import annotations
 
+__author__ = "Em Than - gbc engineers"
+
 import hashlib
 import math
 

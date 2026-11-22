@@ -3,9 +3,10 @@
     <Script>
         <Name>gbc_engineers\hbt_fixture\HBTFixture.py</Name>
         <Title>HBT Fixture</Title>
-        <Version>2.0</Version>
+        <Version>2.1</Version>
         <ReadLastInput>True</ReadLastInput>
     </Script>
+    <!-- Author: Em Than - gbc engineers -->
     <!-- Company library folder: put the shared network path as default value of the parameter
          "LibraryPath" below, e.g. \\server\Allplan\HBT_Library . Empty = Allplan Usr\HBT_Library -->
     <Constants>
@@ -260,7 +261,20 @@
             </Parameter>
           </Parameters>
         </Parameter>
-      </Parameters>
+        <Parameter>
+        <Name>AboutExp</Name>
+        <Text>About</Text>
+        <ValueType>Expander</ValueType>
+        <Parameters>
+          <Parameter>
+            <Name>AuthorText</Name>
+            <Text>Author</Text>
+            <Value>Em Than - gbc engineers</Value>
+            <ValueType>Text</ValueType>
+          </Parameter>
+        </Parameters>
+      </Parameter>
+    </Parameters>
     </Page>
     <Page>
       <Name>PlacementPage</Name>

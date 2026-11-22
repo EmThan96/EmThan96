@@ -3,9 +3,9 @@
 Each PythonPart is a separate Allplan plugin in `plugins/<Name>/` and is delivered as an
 **Allplan Extension Package (`.allep`)**: download the file and drag it into Allplan.
 
-| PythonPart | Package (download) | Instructions |
-|---|---|---|
-| HBT Fixture – HALFEN HBT rebend connections as precast fixtures | [`dist/HBT_Fixture.allep`](dist/HBT_Fixture.allep) | [plugins/HBT_Fixture/README.md](plugins/HBT_Fixture/README.md) |
+| PythonPart | Author | Package (download) | Instructions |
+|---|---|---|---|
+| HBT Fixture – HALFEN HBT rebend connections as precast fixtures | Em Than - gbc engineers | [`dist/HBT_Fixture.allep`](dist/HBT_Fixture.allep) | [plugins/HBT_Fixture/README.md](plugins/HBT_Fixture/README.md) |
 
 ## Install a PythonPart (short version)
 

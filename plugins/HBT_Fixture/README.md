@@ -5,6 +5,7 @@ checks, correct bends, attributes (Plan_text, Answer 1–5) and a company-wide p
 
 | | |
 |---|---|
+| Author | Em Than - gbc engineers |
 | Package | [`dist/HBT_Fixture.allep`](../../dist/HBT_Fixture.allep) |
 | Plugin version | see `install-config.yml` → `plugin.version` |
 | Allplan | 2026 or newer |

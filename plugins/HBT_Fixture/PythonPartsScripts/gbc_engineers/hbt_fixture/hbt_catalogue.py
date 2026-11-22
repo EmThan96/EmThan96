@@ -15,6 +15,8 @@ The dimensioning point is the centre of the casing on the formwork face: (L/2, 0
 
 from __future__ import annotations
 
+__author__ = "Em Than - gbc engineers"
+
 import json
 import math
 import os

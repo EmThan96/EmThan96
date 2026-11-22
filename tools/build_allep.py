@@ -8,7 +8,7 @@ Each plugin folder (plugins/<Name>/) contains install-config.yml plus the Allpla
 (Library, PythonPartsScripts, PythonPartsActionbar, ...). The package is written to
 dist/<Name>.allep (stable download name) and dist/<Name>_<version>.allep.
 
-Checks before packing: required config keys, UUID, semantic version, target location, all files
+Checks before packing: author "Em Than - gbc engineers" (pyp, config, Python modules), required config keys, UUID, semantic version, target location, all files
 referenced by "tools", the script named in each .pyp, well-formed XML of each .pyp.
 Text files are packed with CRLF line endings (Allplan docs warn about LF files).
 
@@ -36,6 +36,7 @@ ALLOWED_FILES = {"install-config.yml", "requirements.in"}
 TEXT_EXT      = {".py", ".pyp", ".yml", ".yaml", ".json", ".xml", ".txt", ".in", ".eng", ".deu", ".fra", ".pypsub"}
 SKIP_PARTS    = {"__pycache__", ".pytest_cache"}
 FIXED_TIME    = (2026, 1, 1, 0, 0, 0)
+AUTHOR        = "Em Than - gbc engineers"
 SEMVER        = re.compile(r"^\d+\.\d+\.\d+([-+][0-9A-Za-z.-]+)?$")
 
 
@@ -56,7 +57,11 @@ def check_plugin(plugin_dir: str) -> dict:
         raise BuildError("install-config.yml missing")
 
     with open(cfg_path, encoding="utf-8") as file:
-        cfg = yaml.safe_load(file)
+        cfg_text = file.read()
+    cfg = yaml.safe_load(cfg_text)
+
+    if f"# Author: {AUTHOR}" not in cfg_text:
+        raise BuildError(f"install-config.yml: comment '# Author: {AUTHOR}' missing")
 
     plugin = cfg.get("plugin") or {}
 
@@ -98,9 +103,22 @@ def check_plugin(plugin_dir: str) -> dict:
                 tree = ET.parse(path)
             except ET.ParseError as err:
                 raise BuildError(f"{name}: invalid XML: {err}") from err
+            with open(path, encoding="utf-8") as file:
+                pyp_text = file.read()
+            authors = [p.findtext("Value") for p in tree.iter("Parameter") if p.findtext("Name") == "AuthorText"]
+            if f"<!-- Author: {AUTHOR} -->" not in pyp_text or authors != [AUTHOR]:
+                raise BuildError(f"{name}: author comment or AuthorText parameter '{AUTHOR}' missing")
             script = tree.findtext("Script/Name")
             if script and not os.path.isfile(_win_path(os.path.join(plugin_dir, "PythonPartsScripts"), script)):
                 raise BuildError(f"{name}: script not found: PythonPartsScripts\\{script}")
+
+    for base, dirs, files in os.walk(os.path.join(plugin_dir, "PythonPartsScripts")):
+        dirs[:] = [d for d in dirs if d not in SKIP_PARTS]
+        for name in files:
+            if name.endswith(".py"):
+                with open(os.path.join(base, name), encoding="utf-8") as file:
+                    if f'__author__ = "{AUTHOR}"' not in file.read():
+                        raise BuildError(f"{name}: __author__ = \"{AUTHOR}\" missing")
 
     return cfg
 
