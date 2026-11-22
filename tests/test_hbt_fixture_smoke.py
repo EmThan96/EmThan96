@@ -68,11 +68,12 @@ def _install_stubs():
 
 
 def _build_ele():
-    names = dict(ProductType="HBT-2R-U", Diameter="16", Spacing="999", BoxLength="1250", CatalogueFile="",
-                 TypeName="", Article="", BoxWidth=0, BoxDepth=0, AnchorLength=0, ConnectionLength=0,
-                 RowDistance=0, BarCount=0, InfoText="", FacePlane=2, FlipSide=False, BarState=1,
-                 CutBoxVolume=True, CommonProp=None, BarColor=6, InputMode=1, TypeList="", DiameterList="",
-                 SpacingList="", BoxLengthList="")
+    names = dict(Rows=2, Casing="HBT 55", RebarType="xx", Diameter="16", Spacing="99", ElementLength="1250",
+                 HBTStrip=False, Article="", StandardDims=True, AnchorLength=0, ConnectionLength=0, LegName="",
+                 LegLength=0, HMin=0, LuMax=0, CasingWidth=0, CasingDepth=0, RebarWidth=0, BarCount=0,
+                 EndSpacing=0, InfoText="", CatalogueFile="", FacePlane=2, FlipSide=False, BarState=1,
+                 CutBoxVolume=True, CommonProp=None, BarColor=6, InputMode=1, CasingList="", RebarTypeList="",
+                 DiameterList="", SpacingList="", LengthList="")
     ele = types.SimpleNamespace(**{k: _Value(v, k) for k, v in names.items()})
     ele.REF_POINT, ele.DIR_POINT = 1, 2
     return ele
@@ -86,10 +87,13 @@ def test_full_flow():
     obj = mod.create_script_object(ele, "doc")
 
     # invalid selection was repaired and lists filled
+    assert ele.Casing.value == "HBT 80"
     assert ele.Diameter.value == "8"
-    assert ele.Spacing.value == "100"
-    assert ele.DiameterList.value == "8|10|12"
-    assert ele.BarCount.value > 0
+    assert ele.Spacing.value == "10"
+    assert ele.DiameterList.value == "8|10"
+    assert ele.BarCount.value == 12
+    assert ele.AnchorLength.value == 170 and ele.ConnectionLength.value == 170
+    assert ele.InfoText.value == "OK"
 
     obj.start_input()
     obj.pnt_result.input_point = _P3(1000, 2000, 0)
@@ -103,6 +107,12 @@ def test_full_flow():
     assert base.CreateElements.called
     assert ele.InputMode.value == ele.REF_POINT
 
-    ele.ProductType.value = "HBT-1R"
-    assert obj.modify_element_property("ProductType", "HBT-1R") is True
-    assert ele.DiameterList.value == "8|10|12|14|16"
+    ele.Rows.value = 1
+    assert obj.modify_element_property("Rows", 1) is True
+    assert ele.CasingList.value == "HBT 55|HBT 85|HBT 120"
+    assert ele.LegName.value == "y"
+
+    ele.StandardDims.value = False
+    ele.AnchorLength.value = 100
+    obj.modify_element_property("AnchorLength", 100)
+    assert "hmin" in ele.InfoText.value

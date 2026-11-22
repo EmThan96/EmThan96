@@ -1,15 +1,16 @@
 """ HBT catalogue access and fixture layout calculation.
 
-This module is pure Python (no Allplan imports), so it can be tested outside Allplan.
+Pure Python (no Allplan imports), so it can be tested outside Allplan.
+Data source: HBT_Catalogue.json (typed from the official technical product information, pages 10-13).
 
-Local fixture coordinate system (all values in mm):
+Local fixture coordinate system (mm):
 
-* origin  = reference point = box end, on the formwork face, centre of the box width
-* +x      = along the box length
-* +y      = across the box width
-* +z      = into the first pour (anchor side); -z = second pour (connection side)
+* origin = reference point = casing end, on the formwork face, centre of the casing width
+* +x     = along the casing length
+* +y     = across the casing width
+* +z     = into component 1 (anchor side, length h); -z = connected component (length lü)
 
-The dimensioning point is the centre of the box on the formwork face: (L/2, 0, 0).
+The dimensioning point is the centre of the casing on the formwork face: (L/2, 0, 0).
 """
 
 from __future__ import annotations
@@ -24,19 +25,28 @@ Point = tuple[float, float, float]
 
 DEFAULT_CATALOGUE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "HBT_Catalogue.json")
 
-# placement constants (must match the values in the .pyp file)
-FACE_HORIZONTAL         = 1     # formwork face is horizontal, box along the click direction
-FACE_VERTICAL_BOX_HORIZ = 2     # formwork face is vertical, box horizontal along the click direction
-FACE_VERTICAL_BOX_VERT  = 3     # formwork face is vertical, box vertical, face along the click direction
+# placement constants (must match the .pyp file)
+FACE_HORIZONTAL         = 1
+FACE_VERTICAL_BOX_HORIZ = 2
+FACE_VERTICAL_BOX_VERT  = 3
 
-BARS_STRAIGHTENED = 1           # installed state: connection legs straightened into the second pour
-BARS_DELIVERED    = 2           # delivery state: connection legs bent into the box
+BARS_STRAIGHTENED = 1           # installed state: connection legs straightened into the connected component
+BARS_DELIVERED    = 2           # delivery state: connection legs bent into the casing
 
-SHEET_THICKNESS = 2.0           # visual thickness of the steel box walls
+SHEET_THICKNESS = 1.0           # visual thickness of the casing walls
+
+ANCHOR_SHAPES     = ("straight", "hook", "hook_in", "hook_out", "u_rows", "loop_x")
+CONNECTION_SHAPES = ("straight", "stirrup")
 
 
 class CatalogueError(Exception):
     """ error in the catalogue data """
+
+
+def _fmt(value: float) -> str:
+    """ number without trailing .0 """
+
+    return str(int(value)) if float(value).is_integer() else str(value)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -44,158 +54,201 @@ class CatalogueError(Exception):
 # ---------------------------------------------------------------------------------------------------------------------
 
 class HBTCatalogue:
-    """ read access to the HBT catalogue JSON file """
+    """ read access to the HBT catalogue """
 
     def __init__(self, data: dict):
-        self.data  = data
-        self.types = {t["code"]: t for t in data.get("types", [])}
+        self.data        = data
+        self.casings     = {(c["rows"], c["code"]): c for c in data.get("casings", [])}
+        self.rebar_types = data.get("rebar_types", {})
 
-        if not self.types:
-            raise CatalogueError("Catalogue contains no types")
+        if not self.casings:
+            raise CatalogueError("Catalogue contains no casings")
 
-        for code, typ in self.types.items():
-            self._validate_type(code, typ)
+        for (_, code), cas in self.casings.items():
+            self._validate_casing(code, cas)
 
     @classmethod
     def load(cls, path: str = DEFAULT_CATALOGUE) -> HBTCatalogue:
-        """ load the catalogue from a JSON file """
-
         with open(path, encoding="utf-8") as file:
             return cls(json.load(file))
 
-    @staticmethod
-    def _validate_type(code: str, typ: dict):
-        rows = typ.get("rows")
+    def _validate_casing(self, code: str, cas: dict):
+        rows = cas.get("rows")
 
         if rows not in (1, 2):
             raise CatalogueError(f"{code}: rows must be 1 or 2")
 
-        if typ.get("anchor_shape") not in ("straight", "hook90", "u"):
-            raise CatalogueError(f"{code}: unknown anchor_shape {typ.get('anchor_shape')}")
+        for rtype in cas.get("rebar_types", []):
+            rdef = self.rebar_types.get(rtype)
 
-        if typ["anchor_shape"] == "u" and rows != 2:
-            raise CatalogueError(f"{code}: anchor_shape 'u' needs rows = 2")
+            if rdef is None:
+                raise CatalogueError(f"{code}: unknown rebar type {rtype}")
+            if rdef["rows"] != rows:
+                raise CatalogueError(f"{code}: rebar type {rtype} is for {rdef['rows']} row(s)")
+            if rdef["anchor"] not in ANCHOR_SHAPES or rdef["connection"] not in CONNECTION_SHAPES:
+                raise CatalogueError(f"rebar type {rtype}: unknown shape")
 
-        if not typ.get("box_lengths"):
-            raise CatalogueError(f"{code}: box_lengths missing")
+        keys = ["lu_std", "lu_max_1250", "lu_max_800"] + (["b", "lu_max_stirrup"] if rows == 2 else ["y"])
 
-        if not typ.get("diameters"):
-            raise CatalogueError(f"{code}: diameters missing")
-
-        for dia, var in typ["diameters"].items():
-            for key in ("spacings", "box_width", "box_depth", "anchor_length", "connection_length"):
+        for dia, var in cas.get("diameters", {}).items():
+            for key in keys:
                 if key not in var:
                     raise CatalogueError(f"{code} D{dia}: '{key}' missing")
+            if dia not in self.data.get("casing_H2", {}):
+                raise CatalogueError(f"{code} D{dia}: no casing height H2")
 
-            if rows == 2 and "row_distance" not in var:
-                raise CatalogueError(f"{code} D{dia}: 'row_distance' missing for 2 rows")
+    # ----- lists for the palette (strings for StringComboBox)
 
-    # ----- lists for the palette (all as strings, used in StringComboBox controls)
+    def casing_codes(self, rows: int) -> list[str]:
+        return [code for (r, code) in self.casings if r == rows]
 
-    def type_codes(self) -> list[str]:
-        return list(self.types)
+    def rebar_type_texts(self, rows: int, casing: str) -> list[str]:
+        return [self.rebar_types[t]["text"] for t in self.casings[(rows, casing)]["rebar_types"]]
 
-    def type_name(self, code: str) -> str:
-        return self.types[code].get("name", code)
+    def rebar_type_code(self, text: str) -> str | None:
+        for code, rdef in self.rebar_types.items():
+            if rdef["text"] == text:
+                return code
+        return None
 
-    def diameters(self, code: str) -> list[str]:
-        return sorted(self.types[code]["diameters"], key=float)
+    def diameters(self, rows: int, casing: str) -> list[str]:
+        return sorted(self.casings[(rows, casing)]["diameters"], key=float)
 
-    def spacings(self, code: str, dia: str) -> list[str]:
-        return [_fmt(s) for s in self.types[code]["diameters"][dia]["spacings"]]
+    def spacings(self, rows: int, casing: str, dia: str) -> list[str]:
+        """ bar spacings in cm (as in the catalogue) """
 
-    def box_lengths(self, code: str) -> list[str]:
-        return [_fmt(length) for length in self.types[code]["box_lengths"]]
+        return sorted(self.casings[(rows, casing)]["diameters"][dia]["lu_std"], key=float)
 
-    # ----- product specification
+    def element_lengths(self) -> list[str]:
+        return list(self.data["element_lengths"])
 
-    def spec(self, code: str, dia: str, spacing: str, box_length: str) -> HBTSpec:
-        """ build a validated product specification """
+    def first_valid(self, rows: int, casing: str | None, type_text: str | None, dia: str | None,
+                    spacing: str | None, length: str | None) -> tuple[int, str, str, str, str, str]:
+        """ valid selection, keeping the given values where they are still valid """
 
-        typ = self.types[code]
-        var = typ["diameters"][dia]
-
-        spec = HBTSpec(type_code         = code,
-                       type_name         = typ.get("name", code),
-                       rows              = typ["rows"],
-                       anchor_shape      = typ["anchor_shape"],
-                       diameter          = float(dia),
-                       spacing           = float(spacing),
-                       box_length        = float(box_length),
-                       box_width         = float(var["box_width"]),
-                       box_depth         = float(var["box_depth"]),
-                       anchor_length     = float(var["anchor_length"]),
-                       connection_length = float(var["connection_length"]),
-                       row_distance      = float(var.get("row_distance", 0.0)),
-                       edge_distance     = float(typ.get("edge_distance", 50.0)),
-                       hook_length       = float(typ.get("hook_length", 0.0)) * float(dia),
-                       article_pattern   = typ.get("article_pattern", "{type} D{d}-{s} L={L}"))
-        return spec
-
-    def first_valid(self, code: str | None, dia: str | None, spacing: str | None,
-                    box_length: str | None) -> tuple[str, str, str, str]:
-        """ return a valid selection, keeping the given values where they are still valid """
-
-        code    = code if code in self.types else self.type_codes()[0]
-        dias    = self.diameters(code)
+        rows    = rows if self.casing_codes(rows) else next(iter(self.casings))[0]
+        codes   = self.casing_codes(rows)
+        casing  = casing if casing in codes else codes[0]
+        texts   = self.rebar_type_texts(rows, casing)
+        type_text = type_text if type_text in texts else texts[0]
+        dias    = self.diameters(rows, casing)
         dia     = dia if dia in dias else dias[0]
-        spcs    = self.spacings(code, dia)
+        spcs    = self.spacings(rows, casing, dia)
         spacing = spacing if spacing in spcs else spcs[0]
-        lens    = self.box_lengths(code)
-        box_length = box_length if box_length in lens else lens[0]
+        lens    = self.element_lengths()
+        length  = length if length in lens else lens[0]
 
-        return code, dia, spacing, box_length
+        return rows, casing, type_text, dia, spacing, length
 
+    # ----- specification
 
-def _fmt(value: float) -> str:
-    """ format a number without trailing .0 """
+    def spec(self, rows: int, casing: str, type_text: str, dia: str, spacing: str, length: str,
+             h: float | None = None, lu: float | None = None, leg: float | None = None,
+             strip: bool = False) -> HBTSpec:
+        """ product specification; h, lu, leg = None -> catalogue default """
 
-    return str(int(value)) if float(value).is_integer() else str(value)
+        cas   = self.casings[(rows, casing)]
+        rtype = self.rebar_type_code(type_text)
+
+        if rtype is None:
+            raise CatalogueError(f"unknown rebar type '{type_text}'")
+
+        rdef  = self.rebar_types[rtype]
+        var   = cas["diameters"][dia]
+        d     = float(dia)
+        stirrup = rdef["connection"] == "stirrup"
+
+        count, end_mm = self.data["bar_layout"][length][spacing]
+
+        lu_max = float(var["lu_max_stirrup"][spacing] if stirrup else
+                       var["lu_max_1250" if length == "1250" else "lu_max_800"][spacing])
+        lu_min = 60.0 if stirrup else 0.0
+        lu_def = lu_max if stirrup else min(float(var["lu_std"][spacing]), lu_max)
+
+        h_min = float(self.data["h_min_stirrup"][rtype][dia] if stirrup else self.data["h_min"])
+        h_def = max(float(self.data["h_std"]), h_min)
+
+        leg_name  = rdef.get("leg") or ""
+        leg_range = None
+
+        if leg_name == "y":
+            leg_def = float(var["y"]) if "y" in var else 10 * d
+        elif rtype == "4":
+            leg_range = cas.get("type4_b_range")
+            leg_def   = float(leg_range[0]) if leg_range else 200.0
+        elif leg_name:
+            leg_def = 10 * d
+        else:
+            leg_def = 0.0
+
+        return HBTSpec(casing        = casing,
+                       rows          = rows,
+                       rebar_type    = rtype,
+                       type_text     = type_text,
+                       anchor        = rdef["anchor"],
+                       connection    = rdef["connection"],
+                       diameter      = d,
+                       spacing       = float(spacing) * 10,
+                       length        = float(length),
+                       bar_count     = int(count),
+                       end_spacing   = float(end_mm),
+                       casing_width  = float(cas["width_B"]),
+                       casing_depth  = float(self.data["casing_H2"][dia]),
+                       casing_h1     = float(self.data.get("casing_H1", 12)),
+                       rebar_width   = float(var.get("b", 0.0)),
+                       h             = h_def if h is None else float(h),
+                       h_min         = h_min,
+                       lu            = lu_def if lu is None else float(lu),
+                       lu_min        = lu_min,
+                       lu_max        = lu_max,
+                       leg_name      = leg_name,
+                       leg           = leg_def if leg is None else float(leg),
+                       leg_range     = tuple(leg_range) if leg_range else None,
+                       strip         = strip and stirrup)
 
 
 # ---------------------------------------------------------------------------------------------------------------------
-# specification and layout
+# specification
 # ---------------------------------------------------------------------------------------------------------------------
 
 @dataclass
 class HBTSpec:
-    """ full product specification of one HBT box """
+    """ full specification of one HBT element """
 
-    type_code        : str
-    type_name        : str
-    rows             : int
-    anchor_shape     : str
-    diameter         : float
-    spacing          : float
-    box_length       : float
-    box_width        : float
-    box_depth        : float
-    anchor_length    : float
-    connection_length: float
-    row_distance     : float = 0.0
-    edge_distance    : float = 50.0
-    hook_length      : float = 0.0
-    article_pattern  : str   = "{type} D{d}-{s} L={L}"
+    casing      : str
+    rows        : int
+    rebar_type  : str
+    type_text   : str
+    anchor      : str
+    connection  : str
+    diameter    : float
+    spacing     : float          # mm
+    length      : float
+    bar_count   : int            # per row
+    end_spacing : float          # mm
+    casing_width: float          # B
+    casing_depth: float          # H2
+    casing_h1   : float
+    rebar_width : float          # b (double row, outer dimension)
+    h           : float
+    h_min       : float
+    lu          : float
+    lu_min      : float
+    lu_max      : float
+    leg_name    : str
+    leg         : float
+    leg_range   : tuple | None = None
+    strip       : bool = False
 
     @property
-    def bar_count(self) -> int:
-        """ bars per row: as many as fit with the spacing inside the box minus the edge distances """
+    def row_distance(self) -> float:
+        """ axis distance of the two rows (b is the outer dimension) """
 
-        usable = self.box_length - 2 * self.edge_distance
-
-        if usable < 0:
-            return 0
-
-        return int(math.floor(usable / self.spacing + 1e-9)) + 1
+        return self.rebar_width - self.diameter if self.rows == 2 else 0.0
 
     @property
     def bar_x_positions(self) -> list[float]:
-        """ x positions of the bars, centred in the box length """
-
-        count = self.bar_count
-        start = (self.box_length - (count - 1) * self.spacing) / 2
-
-        return [start + i * self.spacing for i in range(count)]
+        return [self.end_spacing + i * self.spacing for i in range(self.bar_count)]
 
     @property
     def row_y_positions(self) -> list[float]:
@@ -203,118 +256,153 @@ class HBTSpec:
 
     @property
     def article(self) -> str:
-        return self.article_pattern.format(type=self.type_code, d=_fmt(self.diameter),
-                                           s=_fmt(self.spacing), L=_fmt(self.box_length))
+        """ order designation as in the catalogue, e.g. HBT 85 - 10/10 - 2 - 1250, h = 170, lü = 430 """
+
+        prefix = self.casing.replace("HBT", "HBT-S", 1) if self.strip else self.casing
+        text   = (f"{prefix} - {_fmt(self.diameter)}/{_fmt(self.spacing / 10)} - {self.rebar_type} - "
+                  f"{_fmt(self.length)}, h = {_fmt(self.h)}, lü = {_fmt(self.lu)}")
+
+        if self.leg_name:
+            text += f", {self.leg_name} = {_fmt(self.leg)}"
+
+        return text
 
     def check(self) -> list[str]:
-        """ plausibility checks, returns a list of warnings """
+        """ checks against the catalogue limits """
 
         warnings = []
 
-        if self.bar_count < 1:
-            warnings.append("Box too short for the edge distance")
+        if self.h < self.h_min:
+            warnings.append(f"h < hmin = {_fmt(self.h_min)}")
 
-        if self.rows == 2 and self.row_distance + self.diameter > self.box_width:
-            warnings.append("Row distance does not fit into the box width")
+        if self.lu > self.lu_max:
+            warnings.append(f"lü > lü,max = {_fmt(self.lu_max)}")
 
-        if self.anchor_length <= self.box_depth:
-            warnings.append("Anchor length is not longer than the box depth")
+        if self.lu < self.lu_min:
+            warnings.append(f"lü < {_fmt(self.lu_min)}")
+
+        if self.leg_name and self.leg <= 0:
+            warnings.append(f"{self.leg_name} must be > 0")
+
+        if self.leg_range and not self.leg_range[0] <= self.leg <= self.leg_range[1]:
+            warnings.append(f"b outside {self.leg_range[0]}...{self.leg_range[1]}")
+
+        if self.rebar_type == "4" and not self.leg_range:
+            warnings.append("Type 4 for this casing: on request")
+
+        if self.end_spacing + (self.bar_count - 1) * self.spacing > self.length:
+            warnings.append("bars do not fit into the casing length")
 
         return warnings
 
 
+# ---------------------------------------------------------------------------------------------------------------------
+# layout
+# ---------------------------------------------------------------------------------------------------------------------
+
 @dataclass
 class HBTLayout:
-    """ geometry of one HBT box in local coordinates """
+    """ geometry of one HBT element in local coordinates """
 
     spec       : HBTSpec
-    box_plates : list[tuple[Point, Point]] = field(default_factory=list)   # (min corner, max corner)
+    box_plates : list[tuple[Point, Point]] = field(default_factory=list)
     box_outline: tuple[Point, Point] = ((0, 0, 0), (0, 0, 0))
-    bars       : list[list[Point]]   = field(default_factory=list)          # bar centre lines
+    bars       : list[list[Point]]   = field(default_factory=list)
     ref_point  : Point = (0.0, 0.0, 0.0)
     dim_point  : Point = (0.0, 0.0, 0.0)
 
 
 def compute_layout(spec: HBTSpec, bar_state: int = BARS_STRAIGHTENED) -> HBTLayout:
-    """ calculate the box plates and bar centre lines in local coordinates """
+    """ casing plates and bar centre lines in local coordinates """
 
-    length = spec.box_length
-    half_w = spec.box_width / 2
-    depth  = spec.box_depth
+    length = spec.length
+    half_w = spec.casing_width / 2
+    depth  = spec.casing_depth
     thick  = SHEET_THICKNESS
 
     layout = HBTLayout(spec=spec)
 
-    # ----- box: open at the formwork face (z = 0), back plate at z = depth
-
     layout.box_outline = ((0.0, -half_w, 0.0), (length, half_w, depth))
-    layout.box_plates  = [((0.0,            -half_w,         depth - thick), (length, half_w, depth)),     # back
+    layout.box_plates  = [((0.0,            -half_w,         depth - thick), (length, half_w, depth)),
                           ((0.0,            -half_w,         0.0),           (length, -half_w + thick, depth)),
                           ((0.0,             half_w - thick, 0.0),           (length, half_w, depth)),
-                          ((0.0,            -half_w,         0.0),           (thick, half_w, depth)),      # ends
+                          ((0.0,            -half_w,         0.0),           (thick, half_w, depth)),
                           ((length - thick, -half_w,         0.0),           (length, half_w, depth))]
 
     layout.ref_point = (0.0, 0.0, 0.0)
     layout.dim_point = (length / 2, 0.0, 0.0)
 
-    # ----- bars
-
-    dia     = spec.diameter
-    z_bend  = min(dia * 1.5, depth / 2)            # height of the bent leg inside the box (delivery state)
-    z_anch  = spec.anchor_length
-    rows_y  = spec.row_y_positions
-    x_end   = length - spec.edge_distance / 2      # bent legs stay inside the box
+    delivered = bar_state == BARS_DELIVERED
+    z_face    = min(spec.diameter, depth / 2) if delivered else 0.0     # where the bar leaves the face
+    x_limit   = length - SHEET_THICKNESS - spec.diameter                 # bent legs stay inside the casing
+    rows_y    = spec.row_y_positions
 
     for x in spec.bar_x_positions:
+        anchors = [_anchor(spec, x, y, z_face, idx) for idx, y in enumerate(rows_y)]   # face -> tip
 
-        # connection legs (second pour side), one per row
+        bent_len = max(0.0, min(spec.lu, x_limit - x))
 
-        for y in rows_y:
-            if bar_state == BARS_DELIVERED:
-                leg = [(x, y, z_bend), (min(x + spec.connection_length, x_end), y, z_bend)]
-            else:
-                leg = [(x, y, 0.0), (x, y, -spec.connection_length)]
-
-            if spec.anchor_shape == "u":
-                layout.bars.append(leg)                     # anchor added once as U-bar below
-            else:
-                layout.bars.append(_join(_anchor_leg(spec, x, y, z_anch, z_bend, bar_state), leg))
-
-        if spec.anchor_shape == "u":
+        if spec.rows == 2 and spec.connection == "stirrup":
             y1, y2 = rows_y
-            z0 = z_bend if bar_state == BARS_DELIVERED else 0.0
-            layout.bars.append([(x, y1, z0), (x, y1, z_anch), (x, y2, z_anch), (x, y2, z0)])
+            if delivered:
+                conn = [(x, y1, z_face), (x + bent_len, y1, z_face), (x + bent_len, y2, z_face), (x, y2, z_face)]
+            else:
+                conn = [(x, y1, 0.0), (x, y1, -spec.lu), (x, y2, -spec.lu), (x, y2, 0.0)]
+            layout.bars.append(_join(_join(anchors[0][::-1], conn), anchors[1]))
+            continue
+
+        conns = []
+        for y in rows_y:
+            if delivered:
+                conns.append([(x, y, z_face), (x + bent_len, y, z_face)])
+            else:
+                conns.append([(x, y, 0.0), (x, y, -spec.lu)])
+
+        if spec.anchor == "u_rows":
+            y1, y2 = rows_y
+            u_bar = [(x, y1, z_face), (x, y1, spec.h), (x, y2, spec.h), (x, y2, z_face)]
+            layout.bars.append(_join(_join(conns[0][::-1], u_bar), conns[1]))
+        else:
+            for anchor, conn in zip(anchors, conns):
+                layout.bars.append(_join(anchor[::-1], conn))
+
+    layout.bars = [_clean(bar) for bar in layout.bars]
 
     return layout
 
 
-def _anchor_leg(spec: HBTSpec, x: float, y: float, z_anch: float, z_bend: float, bar_state: int) -> list[Point]:
-    """ anchor leg from its end to the face (or bend point), ordered towards the face """
+def _anchor(spec: HBTSpec, x: float, y: float, z_face: float, row_index: int) -> list[Point]:
+    """ anchor path in component 1, from the face to the tip """
 
-    z0 = z_bend if bar_state == BARS_DELIVERED else 0.0
+    pts = [(x, y, z_face), (x, y, spec.h)]
+    leg = spec.leg
 
-    pts: list[Point] = []
-
-    if spec.anchor_shape == "hook90" and spec.hook_length > 0:
-        pts.append((x + spec.hook_length, y, z_anch))
-
-    pts.append((x, y, z_anch))
-    pts.append((x, y, z0))
+    if spec.anchor == "hook":                       # leg across the casing width (-y)
+        pts.append((x, y - leg, spec.h))
+    elif spec.anchor in ("hook_in", "hook_out"):
+        outward = -1.0 if row_index == 0 else 1.0
+        sign    = outward if spec.anchor == "hook_out" else -outward
+        pts.append((x, y + sign * leg, spec.h))
+    elif spec.anchor == "loop_x":                   # schematic: leg along the casing length
+        pts.append((x + leg, y, spec.h))
 
     return pts
 
 
 def _join(first: list[Point], second: list[Point]) -> list[Point]:
-    """ join two polylines that share the end / start point """
-
-    if first and second and _dist(first[-1], second[0]) < 1e-6:
+    if first and second and math.dist(first[-1], second[0]) < 1e-6:
         return first + second[1:]
-
     return first + second
 
 
-def _dist(p1: Point, p2: Point) -> float:
-    return math.dist(p1, p2)
+def _clean(polyline: list[Point]) -> list[Point]:
+    """ remove zero-length segments """
+
+    result: list[Point] = []
+    for pnt in polyline:
+        if not result or math.dist(result[-1], pnt) > 1e-6:
+            result.append(pnt)
+    return result
 
 
 # ---------------------------------------------------------------------------------------------------------------------
@@ -332,23 +420,20 @@ def _cross(a: Point, b: Point) -> Point:
 
 def placement_axes(ref_point: Point, dir_point: Point | None, face_plane: int, flip: bool,
                    default_dir: Point = (1.0, 0.0, 0.0)) -> tuple[Point, Point, Point]:
-    """ calculate the local axes (x, y, z) in world coordinates
+    """ local axes (x, y, z) in world coordinates; z points into component 1
 
     Args:
         ref_point:   first click (reference point)
         dir_point:   second click (direction point) or None during the first input
         face_plane:  FACE_HORIZONTAL / FACE_VERTICAL_BOX_HORIZ / FACE_VERTICAL_BOX_VERT
-        flip:        put the anchor side on the other side of the face
-        default_dir: direction used when no valid direction point is given
-
-    Returns:
-        x, y and z direction (unit vectors); z points into the first pour
+        flip:        put component 1 on the other side of the face
+        default_dir: direction when no valid direction point is given
     """
 
     direction = default_dir
 
     if dir_point is not None:
-        cand = (dir_point[0] - ref_point[0], dir_point[1] - ref_point[1], 0.0)    # direction in plan
+        cand = (dir_point[0] - ref_point[0], dir_point[1] - ref_point[1], 0.0)
         if math.hypot(cand[0], cand[1]) > 1e-6:
             direction = cand
 
@@ -362,24 +447,15 @@ def placement_axes(ref_point: Point, dir_point: Point | None, face_plane: int, f
 
     if face_plane == FACE_HORIZONTAL:
         x_dir = direction
-        z_dir = (0.0, 0.0, -sign)                                   # default: anchor goes down into the slab
-    elif face_plane == FACE_VERTICAL_BOX_VERT:
-        x_dir = up
-        normal = _cross(up, direction)                              # left side of the click direction
-        z_dir = (normal[0] * sign, normal[1] * sign, normal[2] * sign)
+        z_dir = (0.0, 0.0, -sign)
     else:
-        x_dir = direction
         normal = _cross(up, direction)
-        z_dir = (normal[0] * sign, normal[1] * sign, normal[2] * sign)
+        z_dir  = (normal[0] * sign, normal[1] * sign, normal[2] * sign)
+        x_dir  = up if face_plane == FACE_VERTICAL_BOX_VERT else direction
 
-    y_dir = _cross(z_dir, x_dir)
-
-    return x_dir, _norm(y_dir), z_dir
+    return x_dir, _norm(_cross(z_dir, x_dir)), z_dir
 
 
 def local_to_world(pnt: Point, origin: Point, axes: tuple[Point, Point, Point]) -> Point:
-    """ transform a local point to world coordinates (used for tests and checks) """
-
     x_dir, y_dir, z_dir = axes
-
     return tuple(origin[i] + pnt[0] * x_dir[i] + pnt[1] * y_dir[i] + pnt[2] * z_dir[i] for i in range(3))  # type: ignore

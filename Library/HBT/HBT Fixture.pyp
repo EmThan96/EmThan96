@@ -28,45 +28,129 @@
                 <ValueType>Expander</ValueType>
                 <Parameters>
                     <Parameter>
-                        <Name>ProductType</Name>
-                        <Text>Type</Text>
-                        <Value>HBT-1R</Value>
-                        <ValueList>TypeList</ValueList>
-                        <ValueType>StringComboBox</ValueType>
+                        <Name>Rows</Name>
+                        <Text>Rebar rows</Text>
+                        <Value>1</Value>
+                        <ValueType>RadioButtonGroup</ValueType>
+                        <Parameters>
+                            <Parameter>
+                                <Name>RowsSingle</Name>
+                                <Text>Single-row</Text>
+                                <Value>1</Value>
+                                <ValueType>RadioButton</ValueType>
+                            </Parameter>
+                            <Parameter>
+                                <Name>RowsDouble</Name>
+                                <Text>Double-row</Text>
+                                <Value>2</Value>
+                                <ValueType>RadioButton</ValueType>
+                            </Parameter>
+                        </Parameters>
                     </Parameter>
                     <Parameter>
-                        <Name>TypeName</Name>
-                        <Text>Description</Text>
+                        <Name>Casing</Name>
+                        <Text>Casing type</Text>
+                        <Value>HBT 85</Value>
+                        <ValueType>StringComboBox</ValueType>
+                        <ValueList>CasingList</ValueList>
+                    </Parameter>
+                    <Parameter>
+                        <Name>RebarType</Name>
+                        <Text>Rebar type</Text>
+                        <Value>Type 1 - hook y (standard)</Value>
+                        <ValueType>StringComboBox</ValueType>
+                        <ValueList>RebarTypeList</ValueList>
+                    </Parameter>
+                    <Parameter>
+                        <Name>Diameter</Name>
+                        <Text>Rebar diameter [mm]</Text>
+                        <Value>10</Value>
+                        <ValueType>StringComboBox</ValueType>
+                        <ValueList>DiameterList</ValueList>
+                    </Parameter>
+                    <Parameter>
+                        <Name>Spacing</Name>
+                        <Text>Rebar spacing s [cm]</Text>
+                        <Value>15</Value>
+                        <ValueType>StringComboBox</ValueType>
+                        <ValueList>SpacingList</ValueList>
+                    </Parameter>
+                    <Parameter>
+                        <Name>ElementLength</Name>
+                        <Text>Element length L [mm]</Text>
+                        <Value>1250</Value>
+                        <ValueType>StringComboBox</ValueType>
+                        <ValueList>LengthList</ValueList>
+                    </Parameter>
+                    <Parameter>
+                        <Name>HBTStrip</Name>
+                        <Text>HBT Strip (HBT-S)</Text>
+                        <Value>False</Value>
+                        <ValueType>CheckBox</ValueType>
+                        <Visible>Rows == 2</Visible>
+                    </Parameter>
+                    <Parameter>
+                        <Name>Article</Name>
+                        <Text>Designation</Text>
                         <Value></Value>
                         <ValueType>String</ValueType>
                         <Enable>False</Enable>
                     </Parameter>
+                </Parameters>
+            </Parameter>
+            <Parameter>
+                <Name>DimExp</Name>
+                <Text>Rebar dimensions</Text>
+                <ValueType>Expander</ValueType>
+                <Parameters>
                     <Parameter>
-                        <Name>Diameter</Name>
-                        <Text>Bar diameter [mm]</Text>
-                        <Value>12</Value>
-                        <ValueList>DiameterList</ValueList>
-                        <ValueType>StringComboBox</ValueType>
+                        <Name>StandardDims</Name>
+                        <Text>Standard dimensions</Text>
+                        <Value>True</Value>
+                        <ValueType>CheckBox</ValueType>
                     </Parameter>
                     <Parameter>
-                        <Name>Spacing</Name>
-                        <Text>Bar spacing [mm]</Text>
-                        <Value>150</Value>
-                        <ValueList>SpacingList</ValueList>
-                        <ValueType>StringComboBox</ValueType>
+                        <Name>AnchorLength</Name>
+                        <Text>h (component 1)</Text>
+                        <Value>170</Value>
+                        <ValueType>Length</ValueType>
+                        <Enable>StandardDims == False</Enable>
                     </Parameter>
                     <Parameter>
-                        <Name>BoxLength</Name>
-                        <Text>Box length [mm]</Text>
-                        <Value>1250</Value>
-                        <ValueList>BoxLengthList</ValueList>
-                        <ValueType>StringComboBox</ValueType>
+                        <Name>ConnectionLength</Name>
+                        <Text>lü (connected component)</Text>
+                        <Value>390</Value>
+                        <ValueType>Length</ValueType>
+                        <Enable>StandardDims == False</Enable>
                     </Parameter>
                     <Parameter>
-                        <Name>Article</Name>
-                        <Text>Fixture name</Text>
+                        <Name>LegName</Name>
+                        <Text>Leg name</Text>
                         <Value></Value>
                         <ValueType>String</ValueType>
+                        <Enable>False</Enable>
+                        <Visible>LegName != ""</Visible>
+                    </Parameter>
+                    <Parameter>
+                        <Name>LegLength</Name>
+                        <Text>Leg length (y / b / b1 / b2)</Text>
+                        <Value>95</Value>
+                        <ValueType>Length</ValueType>
+                        <Enable>StandardDims == False</Enable>
+                        <Visible>LegName != ""</Visible>
+                    </Parameter>
+                    <Parameter>
+                        <Name>HMin</Name>
+                        <Text>hmin</Text>
+                        <Value>120</Value>
+                        <ValueType>Length</ValueType>
+                        <Enable>False</Enable>
+                    </Parameter>
+                    <Parameter>
+                        <Name>LuMax</Name>
+                        <Text>lü,max</Text>
+                        <Value>0</Value>
+                        <ValueType>Length</ValueType>
                         <Enable>False</Enable>
                     </Parameter>
                 </Parameters>
@@ -77,50 +161,44 @@
                 <ValueType>Expander</ValueType>
                 <Parameters>
                     <Parameter>
-                        <Name>BoxWidth</Name>
-                        <Text>Box width</Text>
+                        <Name>CasingWidth</Name>
+                        <Text>Casing width B</Text>
                         <Value>0</Value>
                         <ValueType>Length</ValueType>
                         <Enable>False</Enable>
                     </Parameter>
                     <Parameter>
-                        <Name>BoxDepth</Name>
-                        <Text>Box depth</Text>
+                        <Name>CasingDepth</Name>
+                        <Text>Casing height H2</Text>
                         <Value>0</Value>
                         <ValueType>Length</ValueType>
                         <Enable>False</Enable>
                     </Parameter>
                     <Parameter>
-                        <Name>AnchorLength</Name>
-                        <Text>Anchor length (1st pour)</Text>
+                        <Name>RebarWidth</Name>
+                        <Text>Rebar width b</Text>
                         <Value>0</Value>
                         <ValueType>Length</ValueType>
                         <Enable>False</Enable>
-                    </Parameter>
-                    <Parameter>
-                        <Name>ConnectionLength</Name>
-                        <Text>Connection length (2nd pour)</Text>
-                        <Value>0</Value>
-                        <ValueType>Length</ValueType>
-                        <Enable>False</Enable>
-                    </Parameter>
-                    <Parameter>
-                        <Name>RowDistance</Name>
-                        <Text>Row distance</Text>
-                        <Value>0</Value>
-                        <ValueType>Length</ValueType>
-                        <Enable>False</Enable>
+                        <Visible>Rows == 2</Visible>
                     </Parameter>
                     <Parameter>
                         <Name>BarCount</Name>
-                        <Text>Number of bars</Text>
+                        <Text>Number of rebars</Text>
                         <Value>0</Value>
                         <ValueType>Integer</ValueType>
                         <Enable>False</Enable>
                     </Parameter>
                     <Parameter>
+                        <Name>EndSpacing</Name>
+                        <Text>End spacing a</Text>
+                        <Value>0</Value>
+                        <ValueType>Length</ValueType>
+                        <Enable>False</Enable>
+                    </Parameter>
+                    <Parameter>
                         <Name>InfoText</Name>
-                        <Text>Info</Text>
+                        <Text>Check</Text>
                         <Value></Value>
                         <ValueType>String</ValueType>
                         <Enable>False</Enable>
@@ -229,22 +307,27 @@
                 <ValueType>Integer</ValueType>
             </Parameter>
             <Parameter>
-                <Name>TypeList</Name>
-                <Value>HBT-1R</Value>
+                <Name>CasingList</Name>
+                <Value>HBT 85</Value>
+                <ValueType>String</ValueType>
+            </Parameter>
+            <Parameter>
+                <Name>RebarTypeList</Name>
+                <Value>Type 1 - hook y (standard)</Value>
                 <ValueType>String</ValueType>
             </Parameter>
             <Parameter>
                 <Name>DiameterList</Name>
-                <Value>12</Value>
+                <Value>10</Value>
                 <ValueType>String</ValueType>
             </Parameter>
             <Parameter>
                 <Name>SpacingList</Name>
-                <Value>150</Value>
+                <Value>15</Value>
                 <ValueType>String</ValueType>
             </Parameter>
             <Parameter>
-                <Name>BoxLengthList</Name>
+                <Name>LengthList</Name>
                 <Value>1250</Value>
                 <ValueType>String</ValueType>
             </Parameter>

@@ -1,7 +1,7 @@
 """ HBT Fixture - places HBT rebend connection boxes as Allplan precast point fixtures.
 
 Workflow
-    1. Select type, bar diameter, spacing and box length in the property palette.
+    1. Select rows, casing, rebar type, diameter, spacing and length in the property palette.
     2. Click the reference point (box end on the formwork face). Allplan point snap is active
        (end points, mid points, edges and the points of existing fixtures).
     3. Click a second point for the box direction.
@@ -118,7 +118,7 @@ class HBTFixture(BaseScriptObject):
 
 
     def _update_palette_lists(self):
-        """ make the selection valid and fill the dependent combo box lists and info fields """
+        """ make the selection valid, fill the dependent combo box lists, dimensions and info fields """
 
         build_ele = self.build_ele
         cat       = self.catalogue
@@ -127,32 +127,46 @@ class HBTFixture(BaseScriptObject):
             build_ele.InfoText.value = f"Catalogue error: {self.catalogue_error}"
             return
 
-        code, dia, spacing, box_length = cat.first_valid(build_ele.ProductType.value, build_ele.Diameter.value,
-                                                         build_ele.Spacing.value, build_ele.BoxLength.value)
+        rows, casing, type_text, dia, spacing, length = cat.first_valid(
+            build_ele.Rows.value, build_ele.Casing.value, build_ele.RebarType.value,
+            build_ele.Diameter.value, build_ele.Spacing.value, build_ele.ElementLength.value)
 
-        build_ele.ProductType.value = code
-        build_ele.Diameter.value    = dia
-        build_ele.Spacing.value     = spacing
-        build_ele.BoxLength.value   = box_length
+        build_ele.Rows.value          = rows
+        build_ele.Casing.value        = casing
+        build_ele.RebarType.value     = type_text
+        build_ele.Diameter.value      = dia
+        build_ele.Spacing.value       = spacing
+        build_ele.ElementLength.value = length
 
-        build_ele.TypeList.value      = "|".join(cat.type_codes())
-        build_ele.DiameterList.value  = "|".join(cat.diameters(code))
-        build_ele.SpacingList.value   = "|".join(cat.spacings(code, dia))
-        build_ele.BoxLengthList.value = "|".join(cat.box_lengths(code))
+        build_ele.CasingList.value    = "|".join(cat.casing_codes(rows))
+        build_ele.RebarTypeList.value = "|".join(cat.rebar_type_texts(rows, casing))
+        build_ele.DiameterList.value  = "|".join(cat.diameters(rows, casing))
+        build_ele.SpacingList.value   = "|".join(cat.spacings(rows, casing, dia))
+        build_ele.LengthList.value    = "|".join(cat.element_lengths())
 
-        spec = cat.spec(code, dia, spacing, box_length)
+        spec = self._current_spec()
 
-        build_ele.TypeName.value         = spec.type_name
-        build_ele.Article.value          = spec.article
-        build_ele.BoxWidth.value         = spec.box_width
-        build_ele.BoxDepth.value         = spec.box_depth
-        build_ele.AnchorLength.value     = spec.anchor_length
-        build_ele.ConnectionLength.value = spec.connection_length
-        build_ele.RowDistance.value      = spec.row_distance
-        build_ele.BarCount.value         = spec.bar_count * spec.rows
+        if spec is None:
+            build_ele.InfoText.value = "Invalid selection"
+            return
+
+        if build_ele.StandardDims.value:
+            build_ele.AnchorLength.value     = spec.h
+            build_ele.ConnectionLength.value = spec.lu
+            build_ele.LegLength.value        = spec.leg
+
+        build_ele.LegName.value      = spec.leg_name
+        build_ele.Article.value      = spec.article
+        build_ele.CasingWidth.value  = spec.casing_width
+        build_ele.CasingDepth.value  = spec.casing_depth
+        build_ele.RebarWidth.value   = spec.rebar_width
+        build_ele.HMin.value         = spec.h_min
+        build_ele.LuMax.value        = spec.lu_max
+        build_ele.BarCount.value     = spec.bar_count
+        build_ele.EndSpacing.value   = spec.end_spacing
 
         warnings = spec.check()
-        build_ele.InfoText.value = "; ".join(warnings) if warnings else "Catalogue values: PLACEHOLDER - verify!"
+        build_ele.InfoText.value = "; ".join(warnings) if warnings else "OK"
 
 
     def modify_element_property(self,
@@ -279,13 +293,25 @@ class HBTFixture(BaseScriptObject):
     # -----------------------------------------------------------------------------------------------------------------
 
     def _current_spec(self) -> hbt.HBTSpec | None:
+        """ specification from the palette values """
+
         build_ele = self.build_ele
 
         if self.catalogue is None:
             return None
 
-        return self.catalogue.spec(build_ele.ProductType.value, build_ele.Diameter.value,
-                                   build_ele.Spacing.value, build_ele.BoxLength.value)
+        std = build_ele.StandardDims.value
+
+        try:
+            return self.catalogue.spec(build_ele.Rows.value, build_ele.Casing.value, build_ele.RebarType.value, build_ele.Diameter.value,
+                                       build_ele.Spacing.value, build_ele.ElementLength.value,
+                                       h     = None if std else build_ele.AnchorLength.value,
+                                       lu    = None if std else build_ele.ConnectionLength.value,
+                                       leg   = None if std else build_ele.LegLength.value,
+                                       strip = build_ele.HBTStrip.value)
+        except (KeyError, hbt.CatalogueError) as err:
+            print("HBT selection error:", err)
+            return None
 
 
     def _placement_matrix(self,

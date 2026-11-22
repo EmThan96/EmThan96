@@ -1,85 +1,815 @@
 {
-  "_info": {
-    "title": "HBT rebend connection catalogue for the HBT Fixture PythonPart",
-    "status": "PLACEHOLDER VALUES - NOT VERIFIED",
-    "note": "All dimensions in mm. The numbers below were NOT taken from the official manufacturer catalogue. Check every value against the current official HBT technical product information before using the fixtures in a project.",
-    "fields": {
-      "rows": "number of bar rows across the box width (1 or 2)",
-      "anchor_shape": "straight | hook90 | u (u = both rows joined by a U-bar on the anchor side; needs rows = 2)",
-      "box_lengths": "available box lengths",
-      "edge_distance": "minimum distance from box end to first bar axis",
-      "hook_length": "length of the 90 degree hook leg, in bar diameters (only for anchor_shape = hook90)",
-      "diameters.<d>.spacings": "available bar spacings for this bar diameter",
-      "diameters.<d>.box_width": "outer box width",
-      "diameters.<d>.box_depth": "outer box depth (from formwork face into the first pour)",
-      "diameters.<d>.anchor_length": "bar length in the first pour, measured from the formwork face",
-      "diameters.<d>.connection_length": "bar length in the second pour after straightening, measured from the formwork face",
-      "diameters.<d>.row_distance": "axis distance between the two bar rows (only rows = 2)",
-      "article_pattern": "name written into the fixture; placeholders {type} {d} {s} {L}"
-    }
+ "_info": {
+  "source": "HALFEN HBT Rebend Connections, Technical Product Information HBT 22-E (file Halfen_HBT_Leviat_22_v_2026-03-EN.pdf), pages 10-13",
+  "units": "mm (spacing keys in cm as in the catalogue)",
+  "status": "Values typed from the official catalogue pages 10-13. Re-check against the current catalogue before project use.",
+  "modelling_note": "Bend radii are not modelled. Anchor bends (y, b, b1, b2) are drawn as sharp 90 degree legs; shapes of types 2, 4, 7, 8, 22, 23 are schematic."
+ },
+ "casing_H1": 12,
+ "casing_H2": {
+  "8": 24,
+  "10": 30,
+  "12": 36
+ },
+ "h_std": 170,
+ "h_min": 120,
+ "h_min_stirrup": {
+  "6": {
+   "8": 120,
+   "10": 120,
+   "12": 120
   },
-  "types": [
-    {
-      "code": "HBT-1R",
-      "name": "HBT single row",
-      "rows": 1,
-      "anchor_shape": "straight",
-      "box_lengths": [1250],
-      "edge_distance": 50,
-      "hook_length": 0,
-      "article_pattern": "{type} D{d}-{s} L={L}",
-      "diameters": {
-        "8":  {"spacings": [100, 125, 150, 200, 250], "box_width": 60,  "box_depth": 30, "anchor_length": 250, "connection_length": 400},
-        "10": {"spacings": [100, 125, 150, 200, 250], "box_width": 70,  "box_depth": 35, "anchor_length": 300, "connection_length": 500},
-        "12": {"spacings": [100, 125, 150, 200, 250], "box_width": 80,  "box_depth": 40, "anchor_length": 350, "connection_length": 600},
-        "14": {"spacings": [125, 150, 200, 250],      "box_width": 100, "box_depth": 45, "anchor_length": 400, "connection_length": 700},
-        "16": {"spacings": [150, 200, 250],           "box_width": 110, "box_depth": 50, "anchor_length": 450, "connection_length": 800}
-      }
+  "7": {
+   "8": 135,
+   "10": 155,
+   "12": 170
+  },
+  "8": {
+   "8": 135,
+   "10": 155,
+   "12": 170
+  },
+  "9": {
+   "8": 140,
+   "10": 140,
+   "12": 140
+  }
+ },
+ "element_lengths": [
+  "1250",
+  "800"
+ ],
+ "bar_layout": {
+  "1250": {
+   "10": [
+    12,
+    75
+   ],
+   "15": [
+    8,
+    100
+   ],
+   "20": [
+    6,
+    125
+   ],
+   "25": [
+    5,
+    125
+   ]
+  },
+  "800": {
+   "10": [
+    8,
+    50
+   ],
+   "15": [
+    6,
+    25
+   ],
+   "20": [
+    4,
+    100
+   ],
+   "25": [
+    4,
+    25
+   ]
+  }
+ },
+ "rebar_types": {
+  "1": {
+   "rows": 1,
+   "anchor": "hook",
+   "leg": "y",
+   "connection": "straight",
+   "text": "Type 1 - hook y (standard)"
+  },
+  "2": {
+   "rows": 1,
+   "anchor": "hook",
+   "leg": "b",
+   "connection": "straight",
+   "text": "Type 2 - bend b, D=10d"
+  },
+  "3": {
+   "rows": 1,
+   "anchor": "straight",
+   "leg": null,
+   "connection": "straight",
+   "text": "Type 3 - straight"
+  },
+  "4": {
+   "rows": 1,
+   "anchor": "loop_x",
+   "leg": "b",
+   "connection": "straight",
+   "text": "Type 4 - loop b"
+  },
+  "5": {
+   "rows": 2,
+   "anchor": "u_rows",
+   "leg": null,
+   "connection": "straight",
+   "text": "Type 5 - U-bar (standard)"
+  },
+  "11": {
+   "rows": 2,
+   "anchor": "hook",
+   "leg": "y",
+   "connection": "straight",
+   "text": "Type 11 - hooks y"
+  },
+  "22": {
+   "rows": 2,
+   "anchor": "hook_in",
+   "leg": "b2",
+   "connection": "straight",
+   "text": "Type 22 - bends b2"
+  },
+  "23": {
+   "rows": 2,
+   "anchor": "hook_out",
+   "leg": "b1",
+   "connection": "straight",
+   "text": "Type 23 - bends b1, D=10d"
+  },
+  "33": {
+   "rows": 2,
+   "anchor": "straight",
+   "leg": null,
+   "connection": "straight",
+   "text": "Type 33 - straight"
+  },
+  "6": {
+   "rows": 2,
+   "anchor": "straight",
+   "leg": null,
+   "connection": "stirrup",
+   "text": "Type 6 - stirrup, straight"
+  },
+  "7": {
+   "rows": 2,
+   "anchor": "hook_out",
+   "leg": "b1",
+   "connection": "stirrup",
+   "text": "Type 7 - stirrup, bend b1, D=10d"
+  },
+  "8": {
+   "rows": 2,
+   "anchor": "hook_in",
+   "leg": "b2",
+   "connection": "stirrup",
+   "text": "Type 8 - stirrup, bend b2"
+  },
+  "9": {
+   "rows": 2,
+   "anchor": "hook",
+   "leg": "y",
+   "connection": "stirrup",
+   "text": "Type 9 - stirrup, hooks y"
+  }
+ },
+ "casings": [
+  {
+   "code": "HBT 55",
+   "rows": 1,
+   "width_B": 58,
+   "rebar_types": [
+    "1",
+    "2",
+    "3",
+    "4"
+   ],
+   "type4_b_range": [
+    200,
+    500
+   ],
+   "diameters": {
+    "8": {
+     "y": 75,
+     "lu_std": {
+      "10": 210,
+      "15": 320,
+      "20": 320,
+      "25": 320
+     },
+     "lu_max_1250": {
+      "10": 210,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 210,
+      "15": 430,
+      "20": 455,
+      "25": 480
+     }
     },
-    {
-      "code": "HBT-1R-H",
-      "name": "HBT single row, hooked anchor",
-      "rows": 1,
-      "anchor_shape": "hook90",
-      "box_lengths": [1250],
-      "edge_distance": 50,
-      "hook_length": 10,
-      "article_pattern": "{type} D{d}-{s} L={L}",
-      "diameters": {
-        "8":  {"spacings": [100, 125, 150, 200, 250], "box_width": 60,  "box_depth": 30, "anchor_length": 150, "connection_length": 400},
-        "10": {"spacings": [100, 125, 150, 200, 250], "box_width": 70,  "box_depth": 35, "anchor_length": 180, "connection_length": 500},
-        "12": {"spacings": [100, 125, 150, 200, 250], "box_width": 80,  "box_depth": 40, "anchor_length": 210, "connection_length": 600}
-      }
-    },
-    {
-      "code": "HBT-2R",
-      "name": "HBT double row",
-      "rows": 2,
-      "anchor_shape": "straight",
-      "box_lengths": [1250],
-      "edge_distance": 50,
-      "hook_length": 0,
-      "article_pattern": "{type} 2xD{d}-{s} L={L}",
-      "diameters": {
-        "8":  {"spacings": [100, 125, 150, 200, 250], "box_width": 140, "box_depth": 30, "anchor_length": 250, "connection_length": 400, "row_distance": 80},
-        "10": {"spacings": [100, 125, 150, 200, 250], "box_width": 160, "box_depth": 35, "anchor_length": 300, "connection_length": 500, "row_distance": 90},
-        "12": {"spacings": [100, 125, 150, 200, 250], "box_width": 180, "box_depth": 40, "anchor_length": 350, "connection_length": 600, "row_distance": 100}
-      }
-    },
-    {
-      "code": "HBT-2R-U",
-      "name": "HBT double row, U-bar anchor",
-      "rows": 2,
-      "anchor_shape": "u",
-      "box_lengths": [1250],
-      "edge_distance": 50,
-      "hook_length": 0,
-      "article_pattern": "{type} 2xD{d}-{s} L={L}",
-      "diameters": {
-        "8":  {"spacings": [100, 125, 150, 200, 250], "box_width": 140, "box_depth": 30, "anchor_length": 200, "connection_length": 400, "row_distance": 80},
-        "10": {"spacings": [100, 125, 150, 200, 250], "box_width": 160, "box_depth": 35, "anchor_length": 240, "connection_length": 500, "row_distance": 90},
-        "12": {"spacings": [100, 125, 150, 200, 250], "box_width": 180, "box_depth": 40, "anchor_length": 280, "connection_length": 600, "row_distance": 100}
-      }
+    "10": {
+     "y": 95,
+     "lu_std": {
+      "10": 200,
+      "15": 390,
+      "20": 390,
+      "25": 390
+     },
+     "lu_max_1250": {
+      "10": 200,
+      "15": 390,
+      "20": 510,
+      "25": 510
+     },
+     "lu_max_800": {
+      "10": 200,
+      "15": 390,
+      "20": 450,
+      "25": 475
+     }
     }
-  ]
+   }
+  },
+  {
+   "code": "HBT 85",
+   "rows": 1,
+   "width_B": 86,
+   "rebar_types": [
+    "1",
+    "2",
+    "3",
+    "4"
+   ],
+   "type4_b_range": [
+    250,
+    500
+   ],
+   "diameters": {
+    "10": {
+     "y": 95,
+     "lu_std": {
+      "10": 390,
+      "15": 390,
+      "20": 390,
+      "25": 390
+     },
+     "lu_max_1250": {
+      "10": 430,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 400,
+      "15": 425,
+      "20": 450,
+      "25": 475
+     }
+    },
+    "12": {
+     "y": 110,
+     "lu_std": {
+      "10": 430,
+      "15": 460,
+      "20": 460,
+      "25": 460
+     },
+     "lu_max_1250": {
+      "10": 430,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 395,
+      "15": 420,
+      "20": 445,
+      "25": 470
+     }
+    }
+   }
+  },
+  {
+   "code": "HBT 120",
+   "rows": 1,
+   "width_B": 122,
+   "rebar_types": [
+    "1",
+    "2",
+    "3"
+   ],
+   "type4_b_range": null,
+   "diameters": {
+    "10": {
+     "y": 95,
+     "lu_std": {
+      "10": 390,
+      "15": 390,
+      "20": 390,
+      "25": 390
+     },
+     "lu_max_1250": {
+      "10": 600,
+      "15": 600,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 400,
+      "15": 425,
+      "20": 450,
+      "25": 475
+     }
+    },
+    "12": {
+     "y": 110,
+     "lu_std": {
+      "10": 460,
+      "15": 460,
+      "20": 460,
+      "25": 460
+     },
+     "lu_max_1250": {
+      "10": 600,
+      "15": 600,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 395,
+      "15": 420,
+      "20": 445,
+      "25": 470
+     }
+    }
+   }
+  },
+  {
+   "code": "HBT 80",
+   "rows": 2,
+   "width_B": 86,
+   "rebar_types": [
+    "5",
+    "11",
+    "22",
+    "23",
+    "33",
+    "6",
+    "8",
+    "9"
+   ],
+   "diameters": {
+    "8": {
+     "b": 58,
+     "lu_std": {
+      "10": 170,
+      "15": 320,
+      "20": 320,
+      "25": 320
+     },
+     "lu_max_1250": {
+      "10": 170,
+      "15": 360,
+      "20": 450,
+      "25": 500
+     },
+     "lu_max_800": {
+      "10": 170,
+      "15": 360,
+      "20": 450,
+      "25": 480
+     },
+     "lu_max_stirrup": {
+      "10": 70,
+      "15": 125,
+      "20": 175,
+      "25": 225
+     }
+    },
+    "10": {
+     "b": 60,
+     "lu_std": {
+      "10": 160,
+      "15": 320,
+      "20": 390,
+      "25": 390
+     },
+     "lu_max_1250": {
+      "10": 160,
+      "15": 320,
+      "20": 400,
+      "25": 450
+     },
+     "lu_max_800": {
+      "10": 160,
+      "15": 320,
+      "20": 400,
+      "25": 450
+     },
+     "lu_max_stirrup": {
+      "10": 60,
+      "15": 120,
+      "20": 170,
+      "25": 220
+     }
+    }
+   }
+  },
+  {
+   "code": "HBT 120",
+   "rows": 2,
+   "width_B": 122,
+   "rebar_types": [
+    "5",
+    "11",
+    "22",
+    "23",
+    "33",
+    "6",
+    "7",
+    "8",
+    "9"
+   ],
+   "diameters": {
+    "8": {
+     "b": 88,
+     "lu_std": {
+      "10": 290,
+      "15": 320,
+      "20": 320,
+      "25": 320
+     },
+     "lu_max_1250": {
+      "10": 290,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 290,
+      "15": 430,
+      "20": 455,
+      "25": 480
+     },
+     "lu_max_stirrup": {
+      "10": 115,
+      "15": 175,
+      "20": 235,
+      "25": 290
+     }
+    },
+    "10": {
+     "b": 90,
+     "lu_std": {
+      "10": 240,
+      "15": 390,
+      "20": 390,
+      "25": 390
+     },
+     "lu_max_1250": {
+      "10": 240,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 240,
+      "15": 425,
+      "20": 450,
+      "25": 475
+     },
+     "lu_max_stirrup": {
+      "10": 80,
+      "15": 130,
+      "20": 180,
+      "25": 230
+     }
+    },
+    "12": {
+     "b": 92,
+     "lu_std": {
+      "10": 215,
+      "15": 390,
+      "20": 440,
+      "25": 460
+     },
+     "lu_max_1250": {
+      "10": 215,
+      "15": 390,
+      "20": 440,
+      "25": 490
+     },
+     "lu_max_800": {
+      "10": 215,
+      "15": 390,
+      "20": 440,
+      "25": 470
+     },
+     "lu_max_stirrup": {
+      "10": 70,
+      "15": 120,
+      "20": 170,
+      "25": 220
+     }
+    }
+   }
+  },
+  {
+   "code": "HBT 150",
+   "rows": 2,
+   "width_B": 150,
+   "rebar_types": [
+    "5",
+    "11",
+    "22",
+    "23",
+    "33",
+    "6",
+    "7",
+    "8",
+    "9"
+   ],
+   "diameters": {
+    "8": {
+     "b": 116,
+     "lu_std": {
+      "10": 320,
+      "15": 320,
+      "20": 320,
+      "25": 320
+     },
+     "lu_max_1250": {
+      "10": 360,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 360,
+      "15": 430,
+      "20": 455,
+      "25": 480
+     },
+     "lu_max_stirrup": {
+      "10": 100,
+      "15": 150,
+      "20": 210,
+      "25": 260
+     }
+    },
+    "10": {
+     "b": 118,
+     "lu_std": {
+      "10": 360,
+      "15": 390,
+      "20": 390,
+      "25": 390
+     },
+     "lu_max_1250": {
+      "10": 360,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 360,
+      "15": 425,
+      "20": 450,
+      "25": 475
+     },
+     "lu_max_stirrup": {
+      "10": 85,
+      "15": 135,
+      "20": 185,
+      "25": 235
+     }
+    },
+    "12": {
+     "b": 120,
+     "lu_std": {
+      "10": 310,
+      "15": 460,
+      "20": 460,
+      "25": 460
+     },
+     "lu_max_1250": {
+      "10": 310,
+      "15": 480,
+      "20": 530,
+      "25": 580
+     },
+     "lu_max_800": {
+      "10": 310,
+      "15": 420,
+      "20": 445,
+      "25": 470
+     },
+     "lu_max_stirrup": {
+      "10": 90,
+      "15": 150,
+      "20": 200,
+      "25": 250
+     }
+    }
+   }
+  },
+  {
+   "code": "HBT 190",
+   "rows": 2,
+   "width_B": 186,
+   "rebar_types": [
+    "5",
+    "11",
+    "22",
+    "23",
+    "33",
+    "6",
+    "7",
+    "8",
+    "9"
+   ],
+   "diameters": {
+    "8": {
+     "b": 152,
+     "lu_std": {
+      "10": 320,
+      "15": 320,
+      "20": 320,
+      "25": 320
+     },
+     "lu_max_1250": {
+      "10": 500,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 405,
+      "15": 430,
+      "20": 455,
+      "25": 480
+     },
+     "lu_max_stirrup": {
+      "10": 100,
+      "15": 150,
+      "20": 210,
+      "25": 260
+     }
+    },
+    "10": {
+     "b": 154,
+     "lu_std": {
+      "10": 390,
+      "15": 390,
+      "20": 390,
+      "25": 390
+     },
+     "lu_max_1250": {
+      "10": 500,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 400,
+      "15": 425,
+      "20": 450,
+      "25": 475
+     },
+     "lu_max_stirrup": {
+      "10": 110,
+      "15": 170,
+      "20": 220,
+      "25": 280
+     }
+    },
+    "12": {
+     "b": 156,
+     "lu_std": {
+      "10": 430,
+      "15": 460,
+      "20": 460,
+      "25": 460
+     },
+     "lu_max_1250": {
+      "10": 430,
+      "15": 510,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 395,
+      "15": 420,
+      "20": 445,
+      "25": 470
+     },
+     "lu_max_stirrup": {
+      "10": 90,
+      "15": 140,
+      "20": 190,
+      "25": 240
+     }
+    }
+   }
+  },
+  {
+   "code": "HBT 220",
+   "rows": 2,
+   "width_B": 222,
+   "rebar_types": [
+    "5",
+    "11",
+    "22",
+    "23",
+    "33",
+    "6",
+    "7",
+    "8",
+    "9"
+   ],
+   "diameters": {
+    "8": {
+     "b": 188,
+     "lu_std": {
+      "10": 320,
+      "15": 320,
+      "20": 320,
+      "25": 320
+     },
+     "lu_max_1250": {
+      "10": 600,
+      "15": 600,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 405,
+      "15": 430,
+      "20": 455,
+      "25": 480
+     },
+     "lu_max_stirrup": {
+      "10": 100,
+      "15": 150,
+      "20": 210,
+      "25": 260
+     }
+    },
+    "10": {
+     "b": 190,
+     "lu_std": {
+      "10": 390,
+      "15": 390,
+      "20": 390,
+      "25": 390
+     },
+     "lu_max_1250": {
+      "10": 600,
+      "15": 600,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 400,
+      "15": 425,
+      "20": 450,
+      "25": 475
+     },
+     "lu_max_stirrup": {
+      "10": 110,
+      "15": 170,
+      "20": 220,
+      "25": 280
+     }
+    },
+    "12": {
+     "b": 192,
+     "lu_std": {
+      "10": 460,
+      "15": 460,
+      "20": 460,
+      "25": 460
+     },
+     "lu_max_1250": {
+      "10": 600,
+      "15": 600,
+      "20": 600,
+      "25": 600
+     },
+     "lu_max_800": {
+      "10": 395,
+      "15": 420,
+      "20": 445,
+      "25": 470
+     },
+     "lu_max_stirrup": {
+      "10": 90,
+      "15": 140,
+      "20": 190,
+      "25": 240
+     }
+    }
+   }
+  }
+ ]
 }
