@@ -6,6 +6,7 @@ checks, correct bends, attributes (Plan_text, Answer 1–5) and a company-wide p
 | | |
 |---|---|
 | Author | Em Than - gbc engineers |
+| Tested in Allplan 2026 | single element, catalogue selection, face detection, auto row, check (by the author) |
 | Package | [`dist/HBT_Fixture.allep`](../../dist/HBT_Fixture.allep) |
 | Plugin version | see `install-config.yml` → `plugin.version` |
 | Allplan | 2026 or newer |
@@ -141,12 +142,22 @@ Attribute IDs are looked up by name (`AttributeService.GetAttributeID`). Names t
 (`attributes`): Plan_text, Answer 1..5 (also `Answer_1`, `Answer1`). Missing attributes are reported in the
 Allplan trace window and skipped.
 
-## Features waiting for the Allplan-tested script
+## Automatic face detection, auto row, check of placed HBT
 
-The palette already has *Auto row on face*, *Automatic face detection* and *Check placed HBT*. The pure Python
-part (`hbt_face.py`) is in the repository and tested; the Allplan part is in the locally tested
-`HBTFixture.py`, which is not in the repository yet. Until it is merged, these controls show
-"not in this build" and Auto row places a single element.
+- **Automatic face detection** (palette *Placement*, on by default): the planar face of a solid under the clicked
+  points is found; h goes into the solid, lü out of it; the casing follows the clicked direction in the face.
+  No face at the points -> manual orientation (*Formwork face*, *Flip*). Fixtures are ignored, so HBT never
+  snaps onto HBT. *Face found* shows the element and the outward normal, or warnings
+  (h leaves the concrete, lü runs into concrete, casing runs off the face).
+- **Auto row on face (1 click)**: the free run through the click (stops at face ends, openings, recesses,
+  keeps *Distance to face end / opening*) is filled with 1250 / 800 / custom elements like a polyline segment.
+  Vertical face: horizontal row (box vertical: vertical row); other faces: along the longest edge.
+- **Check placed HBT** (button): every HBT fixture in the drawing file is checked (on a concrete face, embedded
+  leg in concrete, free leg not in concrete, casing on the face). Result in the palette, details in the trace,
+  optionally written to an attribute (default *Answer 5*).
+- The measure point is a `Symbol3DElement` (a `ModelElement3D(Point3D)` made Allplan reject the fixture).
+- `GEOMETRY_VERSION` in `HBTFixture.py` is part of the fixture hash: raise it when the fixture geometry
+  changes, otherwise Allplan reuses the old fixture definition.
 
 ## Not yet tested in Allplan
 

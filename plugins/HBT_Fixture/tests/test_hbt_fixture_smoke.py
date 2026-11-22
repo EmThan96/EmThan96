@@ -46,6 +46,9 @@ def _install_stubs(tmp_usr):
     for name in ("CommonProperties", "CreateElements", "DrawElementPreview", "AttributeString", "AttributeSet",
                  "Attributes"):
         setattr(base, name, mock.MagicMock())
+    base.ElementsSelectService = mock.MagicMock()
+    base.ElementsSelectService.SelectAllElements = mock.MagicMock(return_value=[])
+    base.ElementsAttributeService = mock.MagicMock()
     base.AttributeService = mock.MagicMock()
     base.AttributeService.GetAttributeID = mock.MagicMock(
         side_effect=lambda doc, name: {"Plan_text": 100, "Answer 1": 101, "Answer_2": 102}.get(name, -1))
@@ -59,6 +62,7 @@ def _install_stubs(tmp_usr):
         "NemAll_Python_BaseElements": base,
         "NemAll_Python_AllplanSettings": settings,
         "NemAll_Python_BasisElements": mock.MagicMock(),
+        "NemAll_Python_IFW_ElementAdapter": mock.MagicMock(),
         "NemAll_Python_Precast": mock.MagicMock(),
         "CreateElementResult": mock.MagicMock(),
         "BuildingElementListService": mock.MagicMock(),
@@ -238,3 +242,105 @@ def test_pyp_value_lists_work_like_allplan(tmp_path):
 
     assert _allplan_value_list("str(CasingList)", params) == ["HBT 55", "HBT 85", "HBT 120"]
     assert _allplan_value_list("CasingList", params)[0] == "H"            # the original bug
+
+
+
+def _wall_solid():
+    from gbc_engineers.hbt_fixture import hbt_face as hf
+    v = [(0, 0, 0), (3000, 0, 0), (3000, 200, 0), (0, 200, 0),
+         (0, 0, 2500), (3000, 0, 2500), (3000, 200, 2500), (0, 200, 2500)]
+    loops = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
+    return hf.make_solid(v, [[(lp[i], lp[(i + 1) % 4]) for i in range(4)] for lp in loops], "wall")
+
+
+def test_auto_row_on_wall(tmp_path):
+    base, _ = _install_stubs(str(tmp_path / "usr"))
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
+
+    ele = _build_ele(str(tmp_path / "company"))
+    ele.Rows.value, ele.Casing.value, ele.Diameter.value, ele.Spacing.value = 1, "HBT 85", "10", "15"
+    ele.PlacementMode.value, ele.AutoFace.value, ele.EdgeDistance.value = 3, True, 50
+    obj = mod.create_script_object(ele, "doc")
+    obj.face_solids = [_wall_solid()]
+
+    obj.start_input(keep_solids=True)
+    _click(obj, 1000, 0, 1000)                  # front face of the wall, run 50..2950 = 2900 mm
+
+    fixtures = base.CreateElements.call_args.args[2]
+    assert len(fixtures) == 3                   # 1250 + 1250 + 400 is invalid (400 < Lmin) -> 1250 + 800 + 850
+    assert ele.InfoText.value == "Auto row: 3 elements created"
+    assert "outward normal (0.00, -1.00, 0.00)" in ele.FaceInfo.value
+
+
+def test_auto_row_without_face(tmp_path):
+    base, _ = _install_stubs(str(tmp_path / "usr"))
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
+
+    ele = _build_ele(str(tmp_path / "company"))
+    ele.Rows.value, ele.PlacementMode.value, ele.AutoFace.value = 1, 3, True
+    obj = mod.create_script_object(ele, "doc")
+    obj.start_input()
+    _click(obj, 0, -500, 0)
+    assert base.CreateElements.call_count == 0
+    assert "no concrete face" in ele.InfoText.value
+
+
+def test_single_on_face_orients_h_into_solid(tmp_path):
+    _install_stubs(str(tmp_path / "usr"))
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
+
+    ele = _build_ele(str(tmp_path / "company"))
+    ele.Rows.value, ele.AutoFace.value = 1, True
+    obj = mod.create_script_object(ele, "doc")
+    obj.face_solids = [_wall_solid()]
+    axes, face = obj._face_axes((500, 0, 1000), (1500, 0, 1000), [(500, 0, 1000), (1500, 0, 1000)])
+    assert axes[2] == (0.0, 1.0, 0.0)           # h into the wall
+
+
+def test_solid_from_polyhedron(tmp_path):
+    """ conversion of an Allplan Polyhedron3D (vertex / edge / face API) into a hbt_face solid """
+    _install_stubs(str(tmp_path / "usr"))
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
+
+    v = [(0, 0, 0), (1000, 0, 0), (1000, 200, 0), (0, 200, 0),
+         (0, 0, 500), (1000, 0, 500), (1000, 200, 500), (0, 200, 500)]
+    loops = [[0, 3, 2, 1], [4, 5, 6, 7], [0, 1, 5, 4], [1, 2, 6, 5], [2, 3, 7, 6], [3, 0, 4, 7]]
+    edges, faces = [], []
+    for lp in loops:
+        oriented = []
+        for i in range(4):
+            a, b = lp[i], lp[(i + 1) % 4]
+            positive = a < b
+            key = (min(a, b), max(a, b))
+            if key not in edges:
+                edges.append(key)
+            oriented.append(types.SimpleNamespace(EdgeHandle=edges.index(key), Positive=positive))
+        faces.append(oriented)
+
+    poly = types.SimpleNamespace(
+        GetVerticesCount=lambda: len(v), GetVertex=lambda i: (0, _P3(*v[i])),
+        GetFacesCount=lambda: len(faces), GetFace=lambda i: types.SimpleNamespace(GetEdges=lambda i=i: faces[i]),
+        GetEdge=lambda h: (0, types.SimpleNamespace(StartIndex=edges[h][0], EndIndex=edges[h][1])))
+
+    solid = mod._solid_from_polyhedron(poly, "test")
+    assert len(solid.faces) == 6
+    assert solid.is_inside((500, 100, 250)) and not solid.is_inside((500, 300, 250))
+
+
+def test_parse_designation(tmp_path):
+    _install_stubs(str(tmp_path / "usr"))
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
+
+    assert mod._parse_designation("HBT 85 - 10/15 - 1 - 1250, h = 170, lü = 390, y = 95") == (10, 170, 390)
+    assert mod._parse_designation("HBT-S 220 - 12/20 - 7 - 1250, h = 170, lü = 190, b1 = 120") == (12, 170, 190)
+    assert mod._parse_designation("something else") is None
+
+
+def test_check_placed_empty_document(tmp_path):
+    _install_stubs(str(tmp_path / "usr"))
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
+
+    ele = _build_ele(str(tmp_path / "company"))
+    obj = mod.create_script_object(ele, "doc")
+    obj.on_control_event(ele.CHECK_PLACED)
+    assert ele.CheckInfo.value.startswith("0 HBT checked")

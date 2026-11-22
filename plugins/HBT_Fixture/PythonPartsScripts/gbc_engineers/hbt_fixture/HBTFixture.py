@@ -4,6 +4,19 @@ Placement modes
     1. Single element: click the reference point, then the direction point.
     2. Polyline:       click any number of points; ESC creates the elements. Every segment is filled with
                        1250 / 800 standard elements and, if needed, custom elements (catalogue limits checked).
+    3. Auto row:       one click on a concrete face; the free run through the point (stops at face ends,
+                       openings and recesses, keeps the edge distance) is filled like a polyline segment.
+
+Check placed HBT (palette button)
+    Every HBT fixture of the document is checked: on a concrete face, embedded leg in the concrete, free leg
+    not in concrete, casing on the face. Result in the palette and the trace, optionally written to an attribute.
+
+Version 2.4: auto row, check of placed fixtures, coplanar faces, faces with openings, fit and casing warnings.
+
+Orientation
+    Automatic face detection (default): the face of a solid under the clicked points is found; the anchor h goes
+    into the solid, lü points out of it, the casing length follows the clicked direction. Flip reverses h / lü.
+    No solid face at the points -> manual orientation with "Formwork face" and "Flip".
 
 Each created fixture
     * AllplanPrecast.FixturePlacementElement (point fixture)
@@ -22,6 +35,7 @@ __author__ = "Em Than - gbc engineers"
 
 import hashlib
 import math
+import re
 
 from typing import TYPE_CHECKING, Any
 
@@ -29,6 +43,7 @@ import NemAll_Python_AllplanSettings as AllplanSettings
 import NemAll_Python_BaseElements as AllplanBaseEle
 import NemAll_Python_BasisElements as AllplanBasisEle
 import NemAll_Python_Geometry as AllplanGeo
+import NemAll_Python_IFW_ElementAdapter as AllplanEleAdapter
 import NemAll_Python_Precast as AllplanPrecast
 
 from BaseScriptObject import BaseScriptObject, BaseScriptObjectData
@@ -39,6 +54,7 @@ from ScriptObjectInteractors.OnCancelFunctionResult import OnCancelFunctionResul
 from ScriptObjectInteractors.PointInteractor import PointInteractor, PointInteractorResult
 
 from gbc_engineers.hbt_fixture import hbt_catalogue as hbt
+from gbc_engineers.hbt_fixture import hbt_face as hface
 from gbc_engineers.hbt_fixture import hbt_library as hlib
 
 if TYPE_CHECKING:
@@ -49,8 +65,11 @@ else:
 print('Load HBTFixture.py')
 
 CUSTOM_LENGTH = "Custom"
-NOT_IN_BUILD  = "not in this build: needs the Allplan-tested HBTFixture.py (auto face / auto row / check)"
 ARC_FALLBACK_SEGMENTS = 8
+
+# raise when the fixture geometry changes, so Allplan does not reuse an old fixture definition with the same hash
+# 2 = hook y along the casing length, b2 legs side by side (catalogue HBT 22-E page 12)
+GEOMETRY_VERSION = 2
 
 
 def check_allplan_version(_build_ele: BuildingElement,
@@ -107,6 +126,8 @@ class HBTFixture(BaseScriptObject):
         self.catalogue_error = ""
         self.library: hlib.HBTLibrary | None = None
         self.attr_ids: dict[str, int] | None = None
+        self.face_solids: list[hface.Solid] | None = None        # solids of the document, read per input
+        self.face_warnings: list[str] = []                       # fit check of the last placement / preview
 
         self._load_catalogue()
         self._open_library()
@@ -253,15 +274,12 @@ class HBTFixture(BaseScriptObject):
         build_ele.BarCount.value    = spec.bar_count
         build_ele.EndSpacing.value  = spec.end_spacing
 
-        build_ele.FaceInfo.value = "Automatic face detection " + NOT_IN_BUILD if build_ele.AutoFace.value else ""
-
-        if build_ele.PlacementMode.value == build_ele.MODE_AUTOROW:
-            build_ele.InfoText.value = "Auto row " + NOT_IN_BUILD + " - placed as single element"
-        elif build_ele.PlacementMode.value == build_ele.MODE_SINGLE:
+        if build_ele.PlacementMode.value == build_ele.MODE_SINGLE:
             errors = spec.errors()
             build_ele.InfoText.value = "BLOCKED: " + "; ".join(errors) if errors else "OK"
         else:
-            build_ele.InfoText.value = f"Polyline: elements checked per segment (Lmin = {hbt.fmt(spec.minimum_length)})"
+            mode_name = "Auto row" if build_ele.PlacementMode.value == build_ele.MODE_AUTOROW else "Polyline"
+            build_ele.InfoText.value = f"{mode_name}: elements checked per segment (Lmin = {hbt.fmt(spec.minimum_length)})"
 
         if self.library is not None:
             record = self.library.find(self._identity(spec))
@@ -310,11 +328,11 @@ class HBTFixture(BaseScriptObject):
 
         build_ele = self.build_ele
 
-        if event_id == build_ele.CHECK_PLACED:
-            build_ele.CheckInfo.value = "Check placed HBT " + NOT_IN_BUILD
-
-        elif event_id == build_ele.REFRESH_LIBRARY:
+        if event_id == build_ele.REFRESH_LIBRARY:
             self._open_library()
+
+        elif event_id == build_ele.CHECK_PLACED:
+            self._check_placed()
 
         elif event_id == build_ele.LOAD_SAVED and self.library is not None:
             record = self.library.by_label(build_ele.SavedItem.value)
@@ -366,16 +384,24 @@ class HBTFixture(BaseScriptObject):
     # input
     # =================================================================================================================
 
-    def start_input(self):
-        """ start the first point input of the current mode """
+    def start_input(self, keep_solids: bool = False):
+        """ start the first point input of the current mode
+
+        Args:
+            keep_solids: keep the solids read for the face detection (next click of the same input)
+        """
 
         build_ele = self.build_ele
 
         build_ele.InputMode.value = build_ele.REF_POINT
         self.poly_points = []
+        if not keep_solids:
+            self.face_solids = None         # re-read the solids, the model may have changed
 
-        text = ("HBT: reference point (casing end on formwork face)"
-                if build_ele.PlacementMode.value == build_ele.MODE_SINGLE else "HBT polyline: first point")
+        mode = build_ele.PlacementMode.value
+        text = ("HBT: reference point (casing end on formwork face)" if mode == build_ele.MODE_SINGLE else
+                "HBT auto row: click a point on the concrete face" if mode == build_ele.MODE_AUTOROW else
+                "HBT polyline: first point")
 
         self.script_object_interactor = PointInteractor(self.pnt_result, True, text, self.draw_preview,
                                                         z_coord_input = True)
@@ -386,6 +412,13 @@ class HBTFixture(BaseScriptObject):
 
         build_ele = self.build_ele
         point     = AllplanGeo.Point3D(self.pnt_result.input_point)
+
+        if build_ele.PlacementMode.value == build_ele.MODE_AUTOROW:
+            elements, problems = self._auto_row_elements(point)
+            self._create_fixtures(elements)
+            build_ele.InfoText.value = "; ".join(problems) if problems else f"Auto row: {len(elements)} elements created"
+            self.start_input(keep_solids = True)
+            return
 
         if build_ele.PlacementMode.value == build_ele.MODE_POLYLINE:
             self.poly_points.append(point)
@@ -455,7 +488,9 @@ class HBTFixture(BaseScriptObject):
         build_ele = self.build_ele
         cursor    = self.pnt_result.input_point
 
-        if build_ele.PlacementMode.value == build_ele.MODE_POLYLINE:
+        if build_ele.PlacementMode.value == build_ele.MODE_AUTOROW:
+            elements, _ = self._auto_row_elements(AllplanGeo.Point3D(cursor))
+        elif build_ele.PlacementMode.value == build_ele.MODE_POLYLINE:
             if not self.poly_points:
                 return
             elements, _ = self._polyline_elements(self.poly_points + [AllplanGeo.Point3D(cursor)])
@@ -479,6 +514,66 @@ class HBTFixture(BaseScriptObject):
     # placement matrices
     # =================================================================================================================
 
+    def _solids(self) -> list[hface.Solid]:
+        """ solids of the document for the face detection (read once per input) """
+
+        if self.face_solids is None:
+            self.face_solids = _collect_solids(self.document)
+
+        return self.face_solids
+
+
+    def _face_axes(self, start: tuple, end: tuple | None, points: list[tuple]):
+        """ axes on the solid face that contains the points (automatic face detection)
+
+        Returns:
+            (axes, face) or (None, None) if the detection is off or no face contains the points
+        """
+
+        build_ele = self.build_ele
+
+        if not build_ele.AutoFace.value:
+            return None, None
+
+        face = hface.find_face(self._solids(), points,
+                               prefer_horizontal = build_ele.FacePlane.value == hbt.FACE_HORIZONTAL)
+
+        if face is None:
+            return None, None
+
+        axes = hface.face_axes(face, start, end, build_ele.FlipSide.value,
+                               box_vertical = build_ele.FacePlane.value == hbt.FACE_VERTICAL_BOX_VERT)
+
+        if axes is None:
+            return None, None
+
+        # fit check at the given points: h in the concrete, lü free (warning only)
+        spec = self._spec()
+        if spec is not None:
+            for text in hface.fit_warnings(face, self._solids(), points, axes[2], spec.h, spec.lu,
+                                           flip = build_ele.FlipSide.value):
+                if text not in self.face_warnings:
+                    self.face_warnings.append(text)
+
+        return axes, face
+
+
+    def _set_face_info(self, face: hface.Face | None, problems: list[str] | None = None):
+        build_ele = self.build_ele
+        warnings  = getattr(self, "face_warnings", [])
+
+        if not build_ele.AutoFace.value:
+            build_ele.FaceInfo.value = "Off - manual orientation (Formwork face, Flip)"
+        elif problems or (face is not None and warnings):
+            build_ele.FaceInfo.value = "WARNING: " + "; ".join((problems or []) + warnings)
+        elif face is None:
+            build_ele.FaceInfo.value = "No solid face at the point - manual orientation"
+        else:
+            nrm = face.normal
+            build_ele.FaceInfo.value = (f"{face.solid.source if face.solid else 'Solid'}: outward normal "
+                                        f"({nrm[0]:.2f}, {nrm[1]:.2f}, {nrm[2]:.2f}), h into the solid")
+
+
     def _single_matrix(self,
                        ref_point: AllplanGeo.Point3D,
                        dir_point: AllplanGeo.Point3D | None) -> AllplanGeo.Matrix3D:
@@ -487,9 +582,229 @@ class HBTFixture(BaseScriptObject):
         ref = (ref_point.X, ref_point.Y, ref_point.Z)
         drp = None if dir_point is None else (dir_point.X, dir_point.Y, dir_point.Z)
 
-        axes = hbt.placement_axes(ref, drp, build_ele.FacePlane.value, build_ele.FlipSide.value)
+        # automatic: face under both points, else under the reference point (direction point may be off the face)
+        self.face_warnings = []
+        axes, face = self._face_axes(ref, drp, [ref, drp] if drp is not None else [ref])
+        if axes is None and drp is not None:
+            self.face_warnings = []
+            axes, face = self._face_axes(ref, drp, [ref])
+
+        if face is not None:
+            self._check_casing_on_face(face, ref, axes, self._spec())
+
+        self._set_face_info(face)
+
+        if axes is None:
+            axes = hbt.placement_axes(ref, drp, build_ele.FacePlane.value, build_ele.FlipSide.value)
 
         return _matrix(ref, axes)
+
+
+    def _check_casing_on_face(self, face: hface.Face, origin: tuple, axes, spec: hbt.HBTSpec | None):
+        """ warning if the casing footprint does not lie completely on the face (edge, opening, end of the face) """
+
+        if spec is None or axes is None:
+            return
+
+        if not hface.casing_on_face(face, origin, axes, spec.length, spec.casing_width):
+            text = "casing runs off the face (edge / opening / end of face)"
+            if text not in self.face_warnings:
+                self.face_warnings.append(text)
+
+
+    def _auto_row_elements(self, point: AllplanGeo.Point3D) -> tuple[list[tuple[hbt.HBTSpec, Any]], list[str]]:
+        """ automatic row: the free run on the clicked face, filled with 1250 / 800 / custom elements
+
+        Vertical face: horizontal row at the height of the click ("box vertical": vertical row through the click).
+        Other faces:   row along the longest edge of the face.
+        The run stops at the face boundary, openings and recesses; the ends keep the edge distance.
+        """
+
+        build_ele = self.build_ele
+        pnt       = (point.X, point.Y, point.Z)
+
+        self.face_warnings = []
+
+        if not build_ele.AutoFace.value:
+            return [], ["Auto row needs 'Automatic face detection'"]
+
+        face = hface.find_face(self._solids(), [pnt], prefer_horizontal = build_ele.FacePlane.value == hbt.FACE_HORIZONTAL)
+
+        if face is None:
+            self._set_face_info(None)
+            return [], ["Auto row: no concrete face at the point"]
+
+        spec = self._spec()
+        if spec is None:
+            return [], ["Invalid selection"]
+
+        direction = hface.row_direction(face, box_vertical = build_ele.FacePlane.value == hbt.FACE_VERTICAL_BOX_VERT)
+        run       = hface.face_run(face, pnt, direction, spec.casing_width, build_ele.EdgeDistance.value)
+
+        if run is None:
+            self._set_face_info(face)
+            return [], ["Auto row: no free run at the point (edge / opening / recess)"]
+
+        start, end = run
+
+        return self._polyline_elements([AllplanGeo.Point3D(*start), AllplanGeo.Point3D(*end)])
+
+
+    # =================================================================================================================
+    # check of the placed HBT fixtures
+    # =================================================================================================================
+
+    def _check_placed(self):
+        """ check every HBT fixture of the document: on a concrete face, embedded leg in the concrete,
+        free leg not in concrete, casing on the face. Result in the palette, details in the trace;
+        optionally written to an attribute of each fixture.
+        """
+
+        build_ele = self.build_ele
+
+        self.face_solids = None                     # the model may have changed
+        solids  = self._solids()
+        plan_id = self._attribute_ids().get("plan_text", -1)
+
+        mark_id = -1
+        if build_ele.CheckWriteAttribute.value:
+            try:
+                mark_id = AllplanBaseEle.AttributeService.GetAttributeID(self.document, build_ele.CheckAttributeName.value)
+            except (RuntimeError, ValueError, TypeError):
+                mark_id = -1
+
+        try:
+            adapters = AllplanBaseEle.ElementsSelectService.SelectAllElements(self.document)
+        except (RuntimeError, TypeError, ValueError) as err:
+            build_ele.CheckInfo.value = f"Cannot read the elements: {err}"
+            return
+
+        checked, flipped, problems = 0, 0, []
+
+        for i in range(len(adapters)):
+            adapter = adapters[i]
+            try:
+                if "PointFixture" not in str(adapter.GetElementAdapterType().GetTypeName()):
+                    continue
+                attrs = dict(AllplanBaseEle.ElementsAttributeService.GetAttributes(adapter))
+            except (RuntimeError, TypeError, ValueError):
+                continue
+
+            parsed = _parse_designation(str(attrs.get(plan_id, "")) if plan_id > 0 else "")
+            if parsed is None:
+                continue
+
+            checked += 1
+            messages, is_flipped, where = self._check_fixture(adapter, solids, *parsed)
+            flipped += int(is_flipped)
+
+            if messages:
+                problems.append(f"{attrs.get(plan_id)} at ({where}): " + "; ".join(messages))
+
+            if mark_id > 0:
+                text = "HBT check: OK" if not messages else "HBT check: " + "; ".join(messages)
+                try:
+                    lst = AllplanEleAdapter.BaseElementAdapterList()
+                    lst.append(adapter)
+                    AllplanBaseEle.ElementsAttributeService.ChangeAttribute(mark_id, text[:250], lst)
+                except (RuntimeError, TypeError, ValueError) as err:
+                    print("HBT check: cannot write the attribute:", err)
+
+        build_ele.CheckInfo.value = (f"{checked} HBT checked: {checked - len(problems)} OK, {len(problems)} with problems"
+                                     + (f", {flipped} with Flip" if flipped else ""))
+        build_ele.CheckList.value = " | ".join(problems[:3]) + (" | ..." if len(problems) > 3 else "")
+
+        print(f"HBT check: {build_ele.CheckInfo.value}")
+        for text in problems:
+            print("   ", text)
+
+
+    def _check_fixture(self, adapter, solids: list[hface.Solid], diameter: float, h: float,
+                       lu: float) -> tuple[list[str], bool, str]:
+        """ check one placed HBT fixture
+
+        Returns:
+            (problem texts, flipped, position text)
+        """
+
+        try:
+            geo = adapter.GetModelGeometry()
+        except (RuntimeError, TypeError, ValueError):
+            return ["geometry not readable"], False, "?"
+
+        items = geo if isinstance(geo, list) else [geo]
+        mpt   = next((g for g in items if isinstance(g, AllplanGeo.Point3D)), None)
+        breps = [g for g in items if isinstance(g, AllplanGeo.BRep3D)]
+
+        if mpt is None or len(breps) < 6:
+            return ["geometry not readable"], False, "?"
+
+        meas  = (mpt.X, mpt.Y, mpt.Z)
+        where = f"{meas[0]:.0f}, {meas[1]:.0f}, {meas[2]:.0f}"
+        cands = hface.faces_at(solids, meas, tol = 2.0)
+
+        if not cands:
+            return ["not on a concrete face"], False, where
+
+        radius = diameter / 2
+        best   = None
+
+        for face in cands:
+            nrm   = face.normal
+            u_dir = hface._norm(hface._cross((0.0, 0.0, 1.0), nrm)) if abs(nrm[2]) < 0.9 else \
+                    hface._norm(hface._sub((1.0, 0.0, 0.0), hface._mul(nrm, nrm[0])))
+            v_dir = hface._cross(nrm, u_dir)
+
+            # casing length axis = principal axis of the bar positions in the face plane (the casing may be rotated
+            # in the face, e.g. on the top of an inclined wall)
+            u_dir, v_dir = _casing_axes(breps[5:-1], meas, u_dir, v_dir, nrm)
+
+            inv = _matrix(meas, (u_dir, v_dir, nrm))
+            inv.Reverse()
+
+            casing = _local_minmax(breps[:5], inv)
+            bars   = _local_minmax(breps[5:], inv)
+
+            if casing is None or bars is None:
+                continue
+
+            # orientation from the anchor leg h (works for straightened and delivered bars)
+            if abs(-bars[0][2] - (h + radius)) < 5:
+                flip = False
+            elif abs(bars[1][2] - (h + radius)) < 5:
+                flip = True
+            else:
+                result = (["bars do not match the face (orientation)"], False)
+                best   = best or result
+                continue
+
+            # casing footprint on the face, centre line along the long side
+            (cu0, cv0, _), (cu1, cv1, _) = casing
+            long_u = (cu1 - cu0) >= (cv1 - cv0)
+
+            def world(a: float, b: float) -> tuple:
+                return tuple(meas[k] + u_dir[k] * a + v_dir[k] * b for k in range(3))
+
+            if long_u:
+                centre = [world(t, (cv0 + cv1) / 2) for t in (cu0, (cu0 + cu1) / 2, cu1)]
+                corners = [world(t, s) for t in (cu0, (cu0 + cu1) / 2, cu1) for s in (cv0, cv1)]
+            else:
+                centre = [world((cu0 + cu1) / 2, t) for t in (cv0, (cv0 + cv1) / 2, cv1)]
+                corners = [world(s, t) for t in (cv0, (cv0 + cv1) / 2, cv1) for s in (cu0, cu1)]
+
+            z_dir    = nrm if flip else hface._mul(nrm, -1.0)
+            messages = hface.fit_warnings(face, solids, centre, z_dir, h, lu, flip)
+
+            if not all(face.on_surface(c, 2.0) for c in corners):
+                messages.append("casing runs off the face (edge / opening / end of face)")
+
+            if best is None or len(messages) < len(best[0]) or best[0] == ["bars do not match the face (orientation)"]:
+                best = (messages, flip)
+
+        if best is None:
+            return ["geometry not readable"], False, where
+
+        return best[0], best[1], where
 
 
     def _polyline_elements(self, points: list) -> tuple[list[tuple[hbt.HBTSpec, Any]], list[str]]:
@@ -513,11 +828,26 @@ class HBTFixture(BaseScriptObject):
             spec = spec_for(length)
             return spec is not None and not spec.errors()
 
+        last_face  = None
+        face_notes = []
+        self.face_warnings = []
+
         for index, (p_start, p_end) in enumerate(zip(points[:-1], points[1:]), start=1):
             start = (p_start.X, p_start.Y, p_start.Z)
             end   = (p_end.X, p_end.Y, p_end.Z)
-            axes  = hbt.segment_axes(start, end, build_ele.FacePlane.value, build_ele.FlipSide.value,
-                                     build_ele.VerticalFaceAngle.value)
+            mid   = tuple((start[k] + end[k]) / 2 for k in range(3))
+
+            # automatic: the whole segment must lie on one solid face
+            axes, face = self._face_axes(start, end, [start, mid, end])
+
+            if face is not None:
+                last_face = face
+            elif build_ele.AutoFace.value:
+                face_notes.append(f"segment {index}: no solid face - manual orientation")
+
+            if axes is None:
+                axes = hbt.segment_axes(start, end, build_ele.FacePlane.value, build_ele.FlipSide.value,
+                                        build_ele.VerticalFaceAngle.value)
 
             if axes is None:
                 problems.append(f"segment {index}: no valid direction")
@@ -526,7 +856,7 @@ class HBTFixture(BaseScriptObject):
             lengths = hbt.split_length(math.dist(start, end), is_valid)
 
             if lengths is None:
-                problems.append(f"segment {index}: {hbt.fmt(math.dist(start, end))} mm cannot be split "
+                problems.append(f"segment {index}: {math.dist(start, end):.0f} mm cannot be split "
                                 f"within the catalogue limits")
                 continue
 
@@ -535,7 +865,11 @@ class HBTFixture(BaseScriptObject):
             for length in lengths:
                 origin = tuple(start[i] + axes[0][i] * offset for i in range(3))
                 result.append((spec_for(length), _matrix(origin, axes)))
+                if face is not None:
+                    self._check_casing_on_face(face, origin, axes, spec_for(length))
                 offset += length
+
+        self._set_face_info(last_face, face_notes)
 
         return result, problems
 
@@ -703,10 +1037,22 @@ class HBTFixture(BaseScriptObject):
         outline_prop.ViewType = AllplanPrecast.FixtureSlideViewType.e3D_VIEW_OUTLINE_VOLUME
         slides.append(AllplanPrecast.FixtureSlideElement(outline_prop, outline))
 
+        # measure points must be Symbol3DElement - a ModelElement3D(Point3D) makes Allplan reject the fixture
         measure_prop          = AllplanPrecast.FixtureSlideProperties()
         measure_prop.ViewType = AllplanPrecast.FixtureSlideViewType.eMEASURE_POINTS
+
+        symbol_prop                  = AllplanBasisEle.Symbol3DProperties()
+        symbol_prop.SymbolID         = 1
+        symbol_prop.Height           = 1
+        symbol_prop.Width            = 1
+        symbol_prop.IsScaleDependent = False
+
+        help_prop = AllplanBaseEle.CommonProperties(com_prop)
+        help_prop.HelpConstruction = True
+
         slides.append(AllplanPrecast.FixtureSlideElement(
-            measure_prop, [AllplanBasisEle.ModelElement3D(com_prop, AllplanGeo.Point3D(*layout.dim_point))]))
+            measure_prop, [AllplanBasisEle.Symbol3DElement(help_prop, symbol_prop,
+                                                           AllplanGeo.Point3D(*layout.dim_point))]))
 
         fixture_prop                = AllplanPrecast.FixtureProperties()
         fixture_prop.Type           = AllplanPrecast.MacroType.ePoint_Fixture
@@ -716,8 +1062,8 @@ class HBTFixture(BaseScriptObject):
 
         fixture = AllplanPrecast.FixtureElement(fixture_prop, slides)
 
-        # same product + representation -> same hash -> one fixture definition in every project
-        hash_key = f"{identity}|{build_ele.BarState.value}|{build_ele.BarColor.value}"
+        # same product + representation + geometry version -> same hash -> one fixture definition in every project
+        hash_key = f"{identity}|{build_ele.BarState.value}|{build_ele.BarColor.value}|g{GEOMETRY_VERSION}"
         fixture.SetHash(hashlib.sha224(hash_key.encode("utf-8")).hexdigest())
 
         placement_prop              = AllplanPrecast.FixturePlacementProperties()
@@ -735,6 +1081,145 @@ class HBTFixture(BaseScriptObject):
             placement.SetAttributes(attributes)
 
         return placement
+
+
+# =====================================================================================================================
+# helpers for the check of placed fixtures
+# =====================================================================================================================
+
+_DESIGNATION_RE = re.compile(r"^HBT(?:-S)?\s+\d+\s+-\s+(\d+(?:\.\d+)?)/.*?h\s*=\s*(\d+(?:\.\d+)?),\s*lü\s*=\s*(\d+(?:\.\d+)?)")
+
+
+def _parse_designation(text: str) -> tuple[float, float, float] | None:
+    """ (diameter, h, lü) from an HBT order designation, e.g. 'HBT 85 - 10/15 - 1 - 1250, h = 170, lü = 390, y = 95' """
+
+    match = _DESIGNATION_RE.match(text.strip())
+    return None if match is None else (float(match.group(1)), float(match.group(2)), float(match.group(3)))
+
+
+def _casing_axes(bars: list, origin: tuple, u_dir: tuple, v_dir: tuple, normal: tuple) -> tuple[tuple, tuple]:
+    """ in-plane axes (length, width) of a placed casing from the bar positions (2D principal axis) """
+
+    pts = []
+    for bar in bars:
+        try:
+            res = AllplanGeo.CalcMinMax(bar)
+        except (RuntimeError, TypeError, ValueError):
+            continue
+        box = next((r for r in (res if isinstance(res, tuple) else (res,)) if hasattr(r, "Min")), None)
+        if box is None:
+            continue
+        ctr = ((box.Min.X + box.Max.X) / 2 - origin[0], (box.Min.Y + box.Max.Y) / 2 - origin[1],
+               (box.Min.Z + box.Max.Z) / 2 - origin[2])
+        pts.append((hface._dot(ctr, u_dir), hface._dot(ctr, v_dir)))
+
+    if len(pts) < 2:
+        return u_dir, v_dir
+
+    mu = sum(p[0] for p in pts) / len(pts)
+    mv = sum(p[1] for p in pts) / len(pts)
+    suu = sum((p[0] - mu) ** 2 for p in pts)
+    svv = sum((p[1] - mv) ** 2 for p in pts)
+    suv = sum((p[0] - mu) * (p[1] - mv) for p in pts)
+
+    angle = 0.5 * math.atan2(2 * suv, suu - svv)
+    x_dir = hface._norm(hface._add(hface._mul(u_dir, math.cos(angle)), hface._mul(v_dir, math.sin(angle))))
+
+    return x_dir, hface._cross(normal, x_dir)
+
+
+def _local_minmax(breps: list, inverse: AllplanGeo.Matrix3D) -> tuple[tuple, tuple] | None:
+    """ min / max of BReps in a local frame (inverse = world -> local) """
+
+    lo, hi = [1e18] * 3, [-1e18] * 3
+
+    for brep in breps:
+        try:
+            res = AllplanGeo.CalcMinMax(AllplanGeo.Transform(brep, inverse))
+        except (RuntimeError, TypeError, ValueError):
+            continue
+        box = next((r for r in (res if isinstance(res, tuple) else (res,)) if hasattr(r, "Min")), None)
+        if box is None:
+            continue
+        for k, (a, b) in enumerate(((box.Min.X, box.Max.X), (box.Min.Y, box.Max.Y), (box.Min.Z, box.Max.Z))):
+            lo[k] = min(lo[k], a)
+            hi[k] = max(hi[k], b)
+
+    return None if lo[0] > hi[0] else (tuple(lo), tuple(hi))
+
+
+# =====================================================================================================================
+# solids for the automatic face detection
+# =====================================================================================================================
+
+def _collect_solids(document) -> list[hface.Solid]:
+    """ planar solids of all elements with 3D volume geometry (fixtures excluded, so HBT never snaps onto HBT) """
+
+    solids: list[hface.Solid] = []
+
+    try:
+        adapters = AllplanBaseEle.ElementsSelectService.SelectAllElements(document)
+    except (RuntimeError, TypeError, ValueError) as err:
+        print("HBT face detection: cannot read the elements:", err)
+        return solids
+
+    for i in range(len(adapters)):
+        adapter = adapters[i]
+        try:
+            if "Fixture" in str(adapter.GetElementAdapterType().GetTypeName()):
+                continue
+            geo = adapter.GetModelGeometry()
+        except (RuntimeError, TypeError, ValueError):
+            continue
+
+        for item in (geo if isinstance(geo, list) else [geo]):
+            poly = _as_polyhedron(item)
+            if poly is None:
+                continue
+            try:
+                solid = _solid_from_polyhedron(poly, str(adapter.GetDisplayName()))
+            except (RuntimeError, TypeError, ValueError, IndexError):
+                solid = None
+            if solid is not None:
+                solids.append(solid)
+
+    return solids
+
+
+def _as_polyhedron(item) -> AllplanGeo.Polyhedron3D | None:
+    if isinstance(item, AllplanGeo.Polyhedron3D):
+        return item
+
+    if isinstance(item, AllplanGeo.BRep3D):
+        try:
+            settings = AllplanGeo.ApproximationSettings(AllplanGeo.eApproximationSettingsType.ASET_BREP_TESSELATION, 1)
+            err, poly = AllplanGeo.CreatePolyhedron(item, settings)
+            return poly if err == AllplanGeo.eOK else None
+        except (RuntimeError, TypeError, ValueError):
+            return None
+
+    return None
+
+
+def _solid_from_polyhedron(poly: AllplanGeo.Polyhedron3D, source: str) -> hface.Solid | None:
+    def value(res):
+        return res[-1] if isinstance(res, tuple) else res
+
+    vertices = []
+    for i in range(poly.GetVerticesCount()):
+        pnt = value(poly.GetVertex(i))
+        vertices.append((pnt.X, pnt.Y, pnt.Z))
+
+    # per face its oriented edges; a face with openings has several loops (chained in hbt_face)
+    faces_edges = []
+    for fi in range(poly.GetFacesCount()):
+        edges = []
+        for oriented in poly.GetFace(fi).GetEdges():
+            edge = value(poly.GetEdge(oriented.EdgeHandle))
+            edges.append((edge.StartIndex, edge.EndIndex) if oriented.Positive else (edge.EndIndex, edge.StartIndex))
+        faces_edges.append(edges)
+
+    return hface.make_solid(vertices, faces_edges, source)
 
 
 # =====================================================================================================================
