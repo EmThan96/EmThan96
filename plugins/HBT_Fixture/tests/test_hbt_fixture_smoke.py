@@ -190,3 +190,27 @@ def test_polyline(tmp_path):
     assert len(fixtures) == 5
     assert len(os.listdir(tmp_path / "company")) == 2           # two distinct products (1250, 800)
     assert ele.InfoText.value == "5 elements created"
+
+
+def test_invalid_palette_value_is_repaired(tmp_path):
+    """ palette set Casing to a single character ('H') -> no KeyError, selection repaired """
+    _install_stubs(str(tmp_path / "usr"))
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
+
+    ele = _build_ele(str(tmp_path / "company"))
+    ele.Rows.value = 1
+    obj = mod.create_script_object(ele, "doc")
+    ele.Casing.value, ele.RebarType.value, ele.Diameter.value = "H", "T", "1"
+    spec = obj._spec()
+    assert spec is not None and spec.casing == "HBT 55"
+    obj.modify_element_property("Casing", "H")
+    assert ele.Casing.value == "HBT 55" and ele.InfoText.value == "OK"
+
+
+def test_pyp_value_lists_are_python_lists():
+    """ every dynamic combo box list must be a list expression (a bare string is split into characters) """
+    import re
+    pyp = os.path.join(os.path.dirname(__file__), "..", "Library", "gbc engineers", "HBT Fixture.pyp")
+    text = open(pyp, encoding="utf-8").read()
+    for value_list in re.findall(r"<ValueList>([^<]*)</ValueList>", text):
+        assert value_list.endswith('.split("|")'), value_list

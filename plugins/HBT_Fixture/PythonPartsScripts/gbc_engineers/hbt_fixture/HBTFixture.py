@@ -176,9 +176,13 @@ class HBTFixture(BaseScriptObject):
 
         std = build_ele.StandardDims.value
 
+        # repair an invalid palette selection instead of failing (e.g. a value the palette set on its own)
+        rows, casing, type_text, dia, spacing = self.catalogue.first_valid(
+            build_ele.Rows.value, build_ele.Casing.value, build_ele.RebarType.value,
+            build_ele.Diameter.value, build_ele.Spacing.value)
+
         try:
-            return self.catalogue.spec(build_ele.Rows.value, build_ele.Casing.value, build_ele.RebarType.value,
-                                       build_ele.Diameter.value, build_ele.Spacing.value,
+            return self.catalogue.spec(rows, casing, type_text, dia, spacing,
                                        self._length_choice() if length is None else length,
                                        h     = None if std else build_ele.AnchorLength.value,
                                        lu    = None if std else build_ele.ConnectionLength.value,
