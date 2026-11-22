@@ -3,7 +3,7 @@
     <Script>
         <Name>gbc_engineers\hbt_fixture\HBTFixture.py</Name>
         <Title>HBT Fixture</Title>
-        <Version>2.3</Version>
+        <Version>2.4</Version>
         <ReadLastInput>True</ReadLastInput>
     </Script>
     <!-- Author: Em Than - gbc engineers -->
@@ -28,6 +28,16 @@
       <Constant>
         <Name>MODE_POLYLINE</Name>
         <Value>2</Value>
+        <ValueType>Integer</ValueType>
+      </Constant>
+      <Constant>
+        <Name>MODE_AUTOROW</Name>
+        <Value>3</Value>
+        <ValueType>Integer</ValueType>
+      </Constant>
+      <Constant>
+        <Name>CHECK_PLACED</Name>
+        <Value>1003</Value>
         <ValueType>Integer</ValueType>
       </Constant>
       <Constant>
@@ -303,11 +313,37 @@
                   <Value>2</Value>
                   <ValueType>RadioButton</ValueType>
                 </Parameter>
+                <Parameter>
+                  <Name>ModeAutoRow</Name>
+                  <Text>Auto row on face (1 click)</Text>
+                  <Value>3</Value>
+                  <ValueType>RadioButton</ValueType>
+                </Parameter>
               </Parameters>
             </Parameter>
             <Parameter>
+              <Name>EdgeDistance</Name>
+              <Text>Distance to face end / opening</Text>
+              <Value>50</Value>
+              <ValueType>Length</ValueType>
+              <Visible>PlacementMode == 3</Visible>
+            </Parameter>
+            <Parameter>
+              <Name>AutoFace</Name>
+              <Text>Automatic face detection (h into the solid)</Text>
+              <Value>True</Value>
+              <ValueType>CheckBox</ValueType>
+            </Parameter>
+            <Parameter>
+              <Name>FaceInfo</Name>
+              <Text>Face found</Text>
+              <Value></Value>
+              <ValueType>String</ValueType>
+              <Enable>False</Enable>
+            </Parameter>
+            <Parameter>
               <Name>FacePlane</Name>
-              <Text>Formwork face</Text>
+              <Text>Formwork face (manual / edge preference)</Text>
               <Value>2</Value>
               <ValueType>RadioButtonGroup</ValueType>
               <Parameters>
@@ -336,11 +372,11 @@
               <Text>Face normal for vertical segments</Text>
               <Value>0</Value>
               <ValueType>Angle</ValueType>
-              <Visible>PlacementMode == 2</Visible>
+              <Visible>PlacementMode == 2 and AutoFace == False</Visible>
             </Parameter>
             <Parameter>
               <Name>FlipSide</Name>
-              <Text>Flip component 1 side</Text>
+              <Text>Flip: h out of the solid (solid = connected component)</Text>
               <Value>False</Value>
               <ValueType>CheckBox</ValueType>
             </Parameter>
@@ -413,6 +449,54 @@
               <Text>Answer 5</Text>
               <Value></Value>
               <ValueType>String</ValueType>
+            </Parameter>
+          </Parameters>
+        </Parameter>
+        <Parameter>
+          <Name>CheckExp</Name>
+          <Text>Check placed HBT</Text>
+          <ValueType>Expander</ValueType>
+          <Parameters>
+            <Parameter>
+              <Name>CheckButtons</Name>
+              <Text></Text>
+              <ValueType>Row</ValueType>
+              <Parameters>
+                <Parameter>
+                  <Name>CheckButton</Name>
+                  <Text>Check all HBT in the drawing file</Text>
+                  <EventId>CHECK_PLACED</EventId>
+                  <ValueType>Button</ValueType>
+                </Parameter>
+              </Parameters>
+            </Parameter>
+            <Parameter>
+              <Name>CheckWriteAttribute</Name>
+              <Text>Write result to attribute</Text>
+              <Value>False</Value>
+              <ValueType>CheckBox</ValueType>
+            </Parameter>
+            <Parameter>
+              <Name>CheckAttributeName</Name>
+              <Text>Attribute name</Text>
+              <Value>Answer 5</Value>
+              <ValueType>String</ValueType>
+              <Visible>CheckWriteAttribute == True</Visible>
+            </Parameter>
+            <Parameter>
+              <Name>CheckInfo</Name>
+              <Text>Result</Text>
+              <Value></Value>
+              <ValueType>String</ValueType>
+              <Enable>False</Enable>
+            </Parameter>
+            <Parameter>
+              <Name>CheckList</Name>
+              <Text>Problems (all in trace)</Text>
+              <Value></Value>
+              <ValueType>String</ValueType>
+              <Enable>False</Enable>
+              <Visible>CheckList != ""</Visible>
             </Parameter>
           </Parameters>
         </Parameter>

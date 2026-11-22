@@ -133,7 +133,7 @@ def test_layout_type1(cat):
     lay = hbt.compute_layout(sp)
     assert len(lay.bars) == 8
     bar = lay.bars[0]
-    assert bar.points[0] == pytest.approx((100, -95, 170))
+    assert bar.points[0] == pytest.approx((100 - 95, 0, 170))     # hook y along the casing length (tested in Allplan)
     assert bar.points[-1] == pytest.approx((100, 0, -390))
     assert bar.mandrels[0] == 4                              # hook y: EC2
     assert lay.dim_point == (625.0, 0.0, 0.0)
@@ -158,7 +158,9 @@ def test_layout_delivered_inside_casing(cat):
         sp = spec(cat, casing, code, dia, "10", 1250)
         for bar in hbt.compute_layout(sp, hbt.BARS_DELIVERED).bars:
             for x, _, z in bar.points:
-                assert -1e-6 <= x <= sp.length and z >= 0
+                assert z >= 0                                         # nothing in the connected component
+                if z <= sp.casing_depth:                              # bent legs stay inside the casing
+                    assert -1e-6 <= x <= sp.length
 
 
 # ----- fillet algorithm
@@ -277,3 +279,20 @@ def test_invalid_catalogue_rejected(cat):
     bad["casings"] = [{"code": "X", "rows": 1, "width_B": 50, "rebar_types": ["5"], "diameters": {}}]
     with pytest.raises(hbt.CatalogueError):
         hbt.HBTCatalogue(bad)
+
+
+def test_hook_b_type2_across_width(cat):
+    bar = hbt.compute_layout(spec(cat, "HBT 85", "2", "10", "15", 1250)).bars[0]
+    assert bar.points[0] == pytest.approx((100, -100, 170))          # b = 10Ø across the casing width
+
+
+def test_inward_bends_pass_side_by_side(cat):
+    # type 22, HBT 80 Ø8: b2 = 80 > (row distance 50 - Ø) / 2 -> legs shifted by ±Ø along the casing
+    sp = spec(cat, "HBT 80", "22", "8", "15", 1250)
+    lay = hbt.compute_layout(sp)
+    row1, row2 = lay.bars[0], lay.bars[1]
+    assert row1.points[1][0] == pytest.approx(row1.points[-1][0] - 8)
+    assert row2.points[1][0] == pytest.approx(row2.points[-1][0] + 8)
+    # wide casing: no shift needed when the legs do not reach each other
+    sp = spec(cat, "HBT 220", "22", "8", "15", 1250, leg=50)
+    assert hbt._anchor_x_offset(sp, 0) == 0.0

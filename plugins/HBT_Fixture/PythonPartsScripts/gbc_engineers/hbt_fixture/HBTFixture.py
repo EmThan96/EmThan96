@@ -49,6 +49,7 @@ else:
 print('Load HBTFixture.py')
 
 CUSTOM_LENGTH = "Custom"
+NOT_IN_BUILD  = "not in this build: needs the Allplan-tested HBTFixture.py (auto face / auto row / check)"
 ARC_FALLBACK_SEGMENTS = 8
 
 
@@ -252,7 +253,11 @@ class HBTFixture(BaseScriptObject):
         build_ele.BarCount.value    = spec.bar_count
         build_ele.EndSpacing.value  = spec.end_spacing
 
-        if build_ele.PlacementMode.value == build_ele.MODE_SINGLE:
+        build_ele.FaceInfo.value = "Automatic face detection " + NOT_IN_BUILD if build_ele.AutoFace.value else ""
+
+        if build_ele.PlacementMode.value == build_ele.MODE_AUTOROW:
+            build_ele.InfoText.value = "Auto row " + NOT_IN_BUILD + " - placed as single element"
+        elif build_ele.PlacementMode.value == build_ele.MODE_SINGLE:
             errors = spec.errors()
             build_ele.InfoText.value = "BLOCKED: " + "; ".join(errors) if errors else "OK"
         else:
@@ -305,7 +310,10 @@ class HBTFixture(BaseScriptObject):
 
         build_ele = self.build_ele
 
-        if event_id == build_ele.REFRESH_LIBRARY:
+        if event_id == build_ele.CHECK_PLACED:
+            build_ele.CheckInfo.value = "Check placed HBT " + NOT_IN_BUILD
+
+        elif event_id == build_ele.REFRESH_LIBRARY:
             self._open_library()
 
         elif event_id == build_ele.LOAD_SAVED and self.library is not None:

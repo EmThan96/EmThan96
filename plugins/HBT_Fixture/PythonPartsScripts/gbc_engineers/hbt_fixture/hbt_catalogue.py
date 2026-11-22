@@ -468,22 +468,24 @@ def compute_layout(spec: HBTSpec, bar_state: int = BARS_STRAIGHTENED) -> HBTLayo
         def anchor_tip_to_face(path: _Path, y: float, row_index: int):
             """ add the anchor from its tip to the face point """
 
-            tip = _anchor_tip(spec, x, y, row_index)
+            tip    = _anchor_tip(spec, x, y, row_index)
+            corner = (x + _anchor_x_offset(spec, row_index), y, spec.h)
             if tip is not None:
                 path.add(tip)
-                path.add((x, y, spec.h), leg_mand)
+                path.add(corner, leg_mand)
             else:
-                path.add((x, y, spec.h))
+                path.add(corner)
             path.add((x, y, z_face), ec2 if delivered else 0.0)
 
         def anchor_face_to_tip(path: _Path, y: float, row_index: int):
             path.add((x, y, z_face), ec2 if delivered else 0.0)
-            tip = _anchor_tip(spec, x, y, row_index)
+            tip    = _anchor_tip(spec, x, y, row_index)
+            corner = (x + _anchor_x_offset(spec, row_index), y, spec.h)
             if tip is not None:
-                path.add((x, y, spec.h), leg_mand)
+                path.add(corner, leg_mand)
                 path.add(tip)
             else:
-                path.add((x, y, spec.h))
+                path.add(corner)
 
         def connection(path: _Path, y: float, reverse: bool = False):
             pts = [(x, y, z_face), (x + bent_len, y, z_face)] if delivered else [(x, y, 0.0), (x, y, -spec.lu)]
@@ -525,18 +527,37 @@ def compute_layout(spec: HBTSpec, bar_state: int = BARS_STRAIGHTENED) -> HBTLayo
     return layout
 
 
+def _anchor_x_offset(spec: HBTSpec, row_index: int) -> float:
+    """ x offset of the anchor corner (z = h) against the bar position
+
+    Inward bends (b2) that reach the other row cannot lie in one plane. As in the catalogue sketches
+    (HBT 22-E page 12, types 8 and 22), the two legs pass side by side: the anchor legs lean apart
+    along the casing length by one diameter each.
+    """
+
+    if spec.anchor == "hook_in" and spec.rows == 2 and 2 * spec.leg > spec.row_distance - spec.diameter - EPS:
+        return -spec.diameter if row_index == 0 else spec.diameter
+
+    return 0.0
+
+
 def _anchor_tip(spec: HBTSpec, x: float, y: float, row_index: int) -> Point | None:
     """ tip of the anchor leg at z = h, or None for a straight anchor """
 
     leg = spec.leg
+    cx  = x + _anchor_x_offset(spec, row_index)
 
     if spec.anchor == "hook":
-        return (x, y - leg, spec.h)
+        if spec.leg_name == "y":
+            # hook y points along the casing length (catalogue sketches, types 1, 9, 11)
+            return (cx - leg, y, spec.h)
+        # bend b (type 2, D = 10Ø) lies across the casing width (catalogue page 10)
+        return (cx, y - leg, spec.h)
 
     if spec.anchor in ("hook_in", "hook_out"):
         outward = -1.0 if row_index == 0 else 1.0
         sign    = outward if spec.anchor == "hook_out" else -outward
-        return (x, y + sign * leg, spec.h)
+        return (cx, y + sign * leg, spec.h)
 
     if spec.anchor == "loop_x":
         return (x + leg, y, spec.h)

@@ -102,11 +102,12 @@ def _build_ele(library_path):
                  CatalogueFile="", PlacementMode=1, FacePlane=2, VerticalFaceAngle=0, FlipSide=False, BarState=1,
                  CutBoxVolume=True, PlanText="", Answer1="Lot A", Answer2="", Answer3="", Answer4="", Answer5="",
                  LibraryPath=library_path, LibraryFolder="", LibraryStatus="", SavedItem="", CommonProp=None,
-                 BarColor=6, InputMode=1, CasingList="", RebarTypeList="", DiameterList="", SpacingList="",
+                 BarColor=6, InputMode=1, AutoFace=False, FaceInfo="", EdgeDistance=50, CheckInfo="",
+                 CheckList="", CheckWriteAttribute=False, CheckAttributeName="Answer 5", CasingList="", RebarTypeList="", DiameterList="", SpacingList="",
                  LengthList="", SavedList="")
     ele = types.SimpleNamespace(**{k: _Value(v, k) for k, v in names.items()})
-    ele.REF_POINT, ele.DIR_POINT, ele.MODE_SINGLE, ele.MODE_POLYLINE = 1, 2, 1, 2
-    ele.LOAD_SAVED, ele.REFRESH_LIBRARY = 1001, 1002
+    ele.REF_POINT, ele.DIR_POINT, ele.MODE_SINGLE, ele.MODE_POLYLINE, ele.MODE_AUTOROW = 1, 2, 1, 2, 3
+    ele.LOAD_SAVED, ele.REFRESH_LIBRARY, ele.CHECK_PLACED = 1001, 1002, 1003
     return ele
 
 

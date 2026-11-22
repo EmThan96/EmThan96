@@ -141,6 +141,13 @@ Attribute IDs are looked up by name (`AttributeService.GetAttributeID`). Names t
 (`attributes`): Plan_text, Answer 1..5 (also `Answer_1`, `Answer1`). Missing attributes are reported in the
 Allplan trace window and skipped.
 
+## Features waiting for the Allplan-tested script
+
+The palette already has *Auto row on face*, *Automatic face detection* and *Check placed HBT*. The pure Python
+part (`hbt_face.py`) is in the repository and tested; the Allplan part is in the locally tested
+`HBTFixture.py`, which is not in the repository yet. Until it is merged, these controls show
+"not in this build" and Auto row places a single element.
+
 ## Not yet tested in Allplan
 
 Written without an Allplan installation; 59 tests run with stubbed Allplan modules. Test first:
