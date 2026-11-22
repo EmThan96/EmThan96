@@ -6,7 +6,7 @@ import sys
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "PythonPartsScripts"))
 
-from HBT import hbt_library as hlib  # noqa: E402
+from gbc_engineers.hbt_fixture import hbt_library as hlib  # noqa: E402
 
 
 def _record(designation="HBT 85 - 10/15 - 1 - 1250, h = 170, lü = 390, y = 95", answers=("A", "", "", "", "")):

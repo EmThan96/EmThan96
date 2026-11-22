@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 .pytest_cache/
+# only the stable package name is committed; versioned files go to GitHub releases
+dist/*_[0-9]*.allep

@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <Element xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://pythonparts.allplan.com/2026/schemas/PythonPart.xsd">
     <Script>
-        <Name>HBT\HBTFixture.py</Name>
+        <Name>gbc_engineers\hbt_fixture\HBTFixture.py</Name>
         <Title>HBT Fixture</Title>
         <Version>2.0</Version>
         <ReadLastInput>True</ReadLastInput>

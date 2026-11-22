@@ -36,8 +36,8 @@ from BuildingElementListService import BuildingElementListService
 from ScriptObjectInteractors.OnCancelFunctionResult import OnCancelFunctionResult
 from ScriptObjectInteractors.PointInteractor import PointInteractor, PointInteractorResult
 
-from HBT import hbt_catalogue as hbt
-from HBT import hbt_library as hlib
+from gbc_engineers.hbt_fixture import hbt_catalogue as hbt
+from gbc_engineers.hbt_fixture import hbt_library as hlib
 
 if TYPE_CHECKING:
     from __BuildingElementStubFiles.HBTFixtureBuildingElement import HBTFixtureBuildingElement as BuildingElement  # type: ignore

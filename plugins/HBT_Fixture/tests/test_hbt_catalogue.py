@@ -11,7 +11,7 @@ import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "PythonPartsScripts"))
 
-from HBT import hbt_catalogue as hbt  # noqa: E402
+from gbc_engineers.hbt_fixture import hbt_catalogue as hbt  # noqa: E402
 
 DOUBLE = {"5", "11", "22", "23", "33", "6", "7", "8", "9"}
 

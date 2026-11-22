@@ -1,0 +1,29 @@
+# Allplan Extension Package (.allep) configuration
+# Docs: https://pythonparts.allplan.com/2026/manual/for_developer/allep/
+plugin:
+  name: HBT Fixture
+  UUID: 1316585e-dffa-4a89-8771-f04fe3bedb7e          # never change this value
+  version: 1.0.0       # semantic versioning; raise for every release
+  developer: gbc-engineers
+  default-language: en
+  min-allplan-version: 2026
+
+installation:
+  target-location: USR   # USR = current user only; STD = whole office (needs admin rights to install)
+
+tools:
+  - id: hbt-fixture
+    pyp: Library\gbc engineers\HBT Fixture.pyp
+    display-name:
+      en: HBT Fixture
+      de: HBT Fixture
+    icons:
+      small: PythonPartsActionbar\gbc_engineers\HBTFixture_24.png
+      large: PythonPartsActionbar\gbc_engineers\HBTFixture_128.png
+
+task-area:
+  display-name:
+    en: gbc HBT
+    de: gbc HBT
+  layout:
+    - hbt-fixture

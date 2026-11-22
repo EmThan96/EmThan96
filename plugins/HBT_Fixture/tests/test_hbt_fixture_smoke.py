@@ -88,7 +88,7 @@ def _install_stubs(tmp_usr):
     pim.PointInteractor = mock.MagicMock()
     stubs["ScriptObjectInteractors.PointInteractor"] = pim
 
-    for key in [k for k in sys.modules if k.startswith("HBT")]:
+    for key in [k for k in sys.modules if k.startswith("gbc_engineers")]:
         del sys.modules[key]
     sys.modules.update(stubs)
     return base, geo
@@ -118,7 +118,7 @@ def _click(obj, x, y, z=0):
 
 def test_single_and_library(tmp_path):
     base, geo = _install_stubs(str(tmp_path / "usr"))
-    import HBT.HBTFixture as mod
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
 
     lib_dir = tmp_path / "company"
     ele = _build_ele(str(lib_dir))
@@ -157,7 +157,7 @@ def test_single_and_library(tmp_path):
 
 def test_blocked_custom_length_not_created(tmp_path):
     base, _ = _install_stubs(str(tmp_path / "usr"))
-    import HBT.HBTFixture as mod
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
 
     ele = _build_ele(str(tmp_path / "company"))
     ele.Rows.value, ele.Casing.value = 1, "HBT 85"
@@ -173,7 +173,7 @@ def test_blocked_custom_length_not_created(tmp_path):
 
 def test_polyline(tmp_path):
     base, _ = _install_stubs(str(tmp_path / "usr"))
-    import HBT.HBTFixture as mod
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
 
     ele = _build_ele(str(tmp_path / "company"))
     ele.Rows.value, ele.Casing.value, ele.Diameter.value, ele.Spacing.value = 1, "HBT 85", "10", "15"
