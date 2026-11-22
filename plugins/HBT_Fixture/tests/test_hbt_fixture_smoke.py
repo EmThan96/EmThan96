@@ -207,10 +207,33 @@ def test_invalid_palette_value_is_repaired(tmp_path):
     assert ele.Casing.value == "HBT 55" and ele.InfoText.value == "OK"
 
 
-def test_pyp_value_lists_are_python_lists():
-    """ every dynamic combo box list must be a list expression (a bare string is split into characters) """
+def _allplan_value_list(formula: str, params: dict) -> list:
+    """ behaviour of Allplan's ValueListValidator as seen in the Allplan 2026 trace:
+    a bare parameter name -> its value is iterated; any other formula -> evaluated, then .split("|") """
+    if formula in params:
+        return [str(v) for v in params[formula]]
+    result = eval(formula, {}, dict(params))            # noqa: S307 - test helper
+    return [str(v) for v in result.split("|")]
+
+
+def test_pyp_value_lists_work_like_allplan(tmp_path):
+    """ every dynamic combo box list must evaluate to a '|' separated string, not a bare name or a list """
     import re
+    _install_stubs(str(tmp_path / "usr"))
+    import gbc_engineers.hbt_fixture.HBTFixture as mod
+
+    ele = _build_ele(str(tmp_path / "company"))
+    ele.Rows.value = 1
+    mod.create_script_object(ele, "doc")
+    params = {k: v.value for k, v in vars(ele).items() if isinstance(v, _Value)}
+
     pyp = os.path.join(os.path.dirname(__file__), "..", "Library", "gbc engineers", "HBT Fixture.pyp")
     text = open(pyp, encoding="utf-8").read()
-    for value_list in re.findall(r"<ValueList>([^<]*)</ValueList>", text):
-        assert value_list.endswith('.split("|")'), value_list
+    formulas = re.findall(r"<ValueList>([^<]*)</ValueList>", text)
+    assert len(formulas) == 6
+    for formula in formulas:
+        assert formula not in params, f"bare parameter name would be split into characters: {formula}"
+        _allplan_value_list(formula, params)
+
+    assert _allplan_value_list("str(CasingList)", params) == ["HBT 55", "HBT 85", "HBT 120"]
+    assert _allplan_value_list("CasingList", params)[0] == "H"            # the original bug

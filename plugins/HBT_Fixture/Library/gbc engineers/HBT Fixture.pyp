@@ -3,7 +3,7 @@
     <Script>
         <Name>gbc_engineers\hbt_fixture\HBTFixture.py</Name>
         <Title>HBT Fixture</Title>
-        <Version>2.2</Version>
+        <Version>2.3</Version>
         <ReadLastInput>True</ReadLastInput>
     </Script>
     <!-- Author: Em Than - gbc engineers -->
@@ -74,35 +74,35 @@
               <Name>Casing</Name>
               <Text>Casing type</Text>
               <Value>HBT 85</Value>
-              <ValueList>CasingList.split("|")</ValueList>
+              <ValueList>str(CasingList)</ValueList>
               <ValueType>StringComboBox</ValueType>
             </Parameter>
             <Parameter>
               <Name>RebarType</Name>
               <Text>Rebar type</Text>
               <Value>Type 1 - hook y (standard)</Value>
-              <ValueList>RebarTypeList.split("|")</ValueList>
+              <ValueList>str(RebarTypeList)</ValueList>
               <ValueType>StringComboBox</ValueType>
             </Parameter>
             <Parameter>
               <Name>Diameter</Name>
               <Text>Rebar diameter [mm]</Text>
               <Value>10</Value>
-              <ValueList>DiameterList.split("|")</ValueList>
+              <ValueList>str(DiameterList)</ValueList>
               <ValueType>StringComboBox</ValueType>
             </Parameter>
             <Parameter>
               <Name>Spacing</Name>
               <Text>Rebar spacing s [cm]</Text>
               <Value>15</Value>
-              <ValueList>SpacingList.split("|")</ValueList>
+              <ValueList>str(SpacingList)</ValueList>
               <ValueType>StringComboBox</ValueType>
             </Parameter>
             <Parameter>
               <Name>ElementLength</Name>
               <Text>Element length L [mm]</Text>
               <Value>1250</Value>
-              <ValueList>LengthList.split("|")</ValueList>
+              <ValueList>str(LengthList)</ValueList>
               <ValueType>StringComboBox</ValueType>
               <Visible>PlacementMode == 1</Visible>
             </Parameter>
@@ -445,7 +445,7 @@
               <Name>SavedItem</Name>
               <Text>Saved products</Text>
               <Value></Value>
-              <ValueList>SavedList.split("|")</ValueList>
+              <ValueList>str(SavedList)</ValueList>
               <ValueType>StringComboBox</ValueType>
             </Parameter>
             <Parameter>
