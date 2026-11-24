@@ -32,6 +32,10 @@ Every PythonPart carries the author **Em Than - gbc engineers** in all of these 
 
 ## Packaging (always)
 
+Use the project skill `.claude/skills/allep-package` (scripts for a new plugin skeleton and version bumps,
+confirmation rules, checks, known Allplan pitfalls).
+
+
 - Every new PythonPart gets an `install-config.yml` with a NEW `uuid4` (never change it later),
   `developer: gbc-engineers`, `min-allplan-version: 2026`, `target-location: USR` unless the user says STD,
   one `tools` entry with icons, and a task area named `gbc <short name>`.

@@ -24,6 +24,7 @@ README of each PythonPart.
 | Run all tests | `python -m pytest plugins/*/tests tools` (no Allplan needed) |
 | Release | raise `plugin.version` in the plugin's `install-config.yml`, push a tag → GitHub Action `.github/workflows/build-allep.yml` builds, tests and creates a release draft with the `.allep` files |
 
-Rules for new PythonParts: see [CLAUDE.md](CLAUDE.md).
+Rules for new PythonParts: see [CLAUDE.md](CLAUDE.md). Packaging workflow for Claude: skill
+[`.claude/skills/allep-package`](.claude/skills/allep-package/SKILL.md).
 Allplan documentation: [Allep packaging](https://pythonparts.allplan.com/2026/manual/for_developer/allep/),
 [delivery](https://pythonparts.allplan.com/2026/manual/for_developer/delivery/).

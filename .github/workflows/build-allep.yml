@@ -23,7 +23,7 @@ jobs:
           python-version: "3.13"
 
       - name: Install tools
-        run: pip install pytest pyyaml
+        run: pip install pytest pyyaml pillow
 
       - name: Run tests of all plugins
         run: |
