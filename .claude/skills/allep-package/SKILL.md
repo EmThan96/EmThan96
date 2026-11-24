@@ -15,7 +15,7 @@ each with a recommended default.
 
 | Situation | Ask the user | Default to propose |
 |---|---|---|
-| **New plugin** | plugin folder name, Title (Library/Actionbar name), short name for the task area | derived from the PythonPart name, e.g. `Corbel_Fixture`, `Corbel Fixture`, `gbc Corbel` |
+| **New plugin** | plugin folder name, Title (Library/Actionbar name) | derived from the PythonPart name, e.g. `Corbel_Fixture`, `Corbel Fixture` |
 | **New plugin** | install location **USR** (each user, no admin) or **STD** (whole office, admin must install) | USR |
 | New plugin with shared paths / attributes | values the user did not give (e.g. company network folder) | leave empty, explain the fallback |
 | Existing plugin, change is a **breaking** change | major version? | - |
@@ -23,7 +23,9 @@ each with a recommended default.
 
 Never ask, decide yourself and state it in one line:
 - UUID: new `uuid4` for a new plugin; NEVER change an existing UUID (Allplan uses it to update the plugin).
-- Author `Em Than - gbc engineers`, `developer: gbc-engineers`, `min-allplan-version: 2026` (fixed by CLAUDE.md).
+- Author `Em Than - gbc engineers`, Actionbar task area `Em Than - gbc engineers`, `developer: gbc-engineers`,
+  `min-allplan-version: 2026` (fixed by CLAUDE.md). Company name always lowercase (organization rule),
+  even if asked for "Gbc" / "GBC" - say so in one line.
 - Version level for an existing plugin: **patch** = bug fix, **minor** = new feature / new palette control.
   Raise the `.pyp <Version>` (`--pyp`) whenever the PythonPart itself changed.
 - Icons: placeholder icons from the skeleton unless the user gives real ones.

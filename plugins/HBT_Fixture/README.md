@@ -12,7 +12,7 @@ checks, correct bends, attributes (Plan_text, Answer 1–5) and a company-wide p
 | Allplan | 2026 or newer |
 | Install location | USR (current user) – change to STD for the whole office, see below |
 | Library entry | `gbc engineers` → `HBT Fixture` |
-| Actionbar | tab *Plug-ins* → task area *gbc HBT* |
+| Actionbar | tab *Plug-ins* → task area *Em Than - gbc engineers* |
 
 > **Data source:** `HBT_Catalogue.json` was typed from *HALFEN HBT Rebend Connections – Technical Product
 > Information HBT 22-E* (file `Halfen_HBT_Leviat_22_v_2026-03-EN.pdf`), pages 10–13 and 22.
@@ -31,7 +31,7 @@ checks, correct bends, attributes (Plan_text, Answer 1–5) and a company-wide p
 4. Confirm the installation dialog. Restart Allplan if Allplan asks for it.
 5. Check:
    - Library palette → `Office` / `Private` → **gbc engineers → HBT Fixture**, and
-   - Actionbar → tab **Plug-ins** → task area **gbc HBT** (icon "HBT").
+   - Actionbar → tab **Plug-ins** → task area **Em Than - gbc engineers** (icon "HBT").
 
 ## 2. Installation for the whole office (STD)
 

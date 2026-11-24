@@ -38,7 +38,7 @@ confirmation rules, checks, known Allplan pitfalls).
 
 - Every new PythonPart gets an `install-config.yml` with a NEW `uuid4` (never change it later),
   `developer: gbc-engineers`, `min-allplan-version: 2026`, `target-location: USR` unless the user says STD,
-  one `tools` entry with icons, and a task area named `gbc <short name>`.
+  one `tools` entry with icons, and the task area named `Em Than - gbc engineers`.
 - After every change: raise `plugin.version` (semver) and the .pyp `<Version>` if the PythonPart changed,
   run `python tools/build_allep.py`, run all tests, and commit `dist/<Name>.allep` together with the source.
 - Add the PythonPart to the table in the root `README.md`.

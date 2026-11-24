@@ -6,7 +6,8 @@ Usage (from the repository root):
     Name        plugin folder, PascalCase_With_Underscores        e.g. Corbel_Fixture
     Title       Library / Actionbar name of the PythonPart          e.g. "Corbel Fixture"
     snake_name  Python package under PythonPartsScripts/gbc_engineers e.g. corbel_fixture
-    short       task area name on the Actionbar: "gbc <short>"     e.g. "Corbel"
+    short       short label for the placeholder icon                e.g. "Corbel"
+                (the Actionbar task area is always named "Em Than - gbc engineers")
     USR|STD     install location (default USR)
 
 Creates plugins/<Name>/ with install-config.yml (new uuid4), .pyp (author comment + About/Author),
@@ -98,8 +99,8 @@ tools:
 
 task-area:
   display-name:
-    en: gbc {short}
-    de: gbc {short}
+    en: {AUTHOR}
+    de: {AUTHOR}
   layout:
     - {tool_id}
 """,
@@ -198,11 +199,11 @@ TODO: one paragraph on what the PythonPart does.
 | Allplan | 2026 or newer |
 | Install location | {target} |
 | Library entry | `gbc engineers` → `{title}` |
-| Actionbar | tab *Plug-ins* → task area *gbc {short}* |
+| Actionbar | tab *Plug-ins* → task area *{AUTHOR}* |
 
 ## 1. Installation (normal user)
 1. Download **`{name}.allep`**. 2. Drag it into the Allplan window. 3. Confirm, restart Allplan if asked.
-4. Library → **gbc engineers → {title}**, or Actionbar → **Plug-ins** → **gbc {short}**.
+4. Library → **gbc engineers → {title}**, or Actionbar → **Plug-ins** → **{AUTHOR}**.
 
 ## 2. Installation for the whole office (STD)
 Set `target-location: STD`, raise the version, rebuild; an administrator drags the `.allep` into Allplan once.
